@@ -56,7 +56,7 @@ export function CreateAdcoinView() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="mb-8 text-center">
-        <h2 className="text-3xl font-bold mb-2">Create an Adcoin</h2>
+        <h2 className="text-3xl font-bold mb-2">Create an Adcoin Offer</h2>
         <p className="text-muted-foreground">Make an Adcoin offer to the creator.</p>
       </div>
 
@@ -91,11 +91,10 @@ export function CreateAdcoinView() {
                 <span className="font-medium">when</span>
                 <Input
                   className="inline-flex h-12 text-xl font-mono max-w-xs flex-1 min-w-[200px]"
-                  placeholder="jesse"
+                  placeholder="jesse.base.eth"
                   value={formData.creatorBaseName}
                   onChange={(e) => setFormData({ ...formData, creatorBaseName: e.target.value })}
-                />
-                <span className="font-medium text-muted-foreground">.base.eth</span>
+                />                
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
@@ -115,7 +114,7 @@ export function CreateAdcoinView() {
               <div className="flex flex-wrap items-center gap-3">
                 <Input
                   className="inline-flex h-12 text-xl font-mono max-w-xs flex-1 min-w-[200px]"
-                  placeholder="$ADCOIN"
+                  placeholder="$NewBrand"
                   value={formData.targetCoin}
                   onChange={(e) => setFormData({ ...formData, targetCoin: e.target.value })}
                 />

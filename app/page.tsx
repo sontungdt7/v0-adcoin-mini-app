@@ -14,7 +14,7 @@ export default function AdcoinApp() {
     <div className="flex flex-col h-screen bg-background">
       <header className="px-4 py-4 border-b border-border">
         <h1 className="text-2xl font-bold">Adcoin</h1>
-        <p className="text-xs text-muted-foreground">Coin-based Ad Marketplace</p>
+        <p className="text-xs text-muted-foreground">Connect Brands with Creators</p>
       </header>
 
       <main className="flex-1 overflow-y-auto pb-20">
