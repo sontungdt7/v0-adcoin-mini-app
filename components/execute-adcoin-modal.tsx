@@ -58,7 +58,7 @@ export function ExecuteAdcoinModal({ adcoin, open, onClose }: ExecuteAdcoinModal
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
         <DialogHeader>
           <DialogTitle className="text-xl">Accept Offer</DialogTitle>
           <DialogDescription>Review the swap details below</DialogDescription>
