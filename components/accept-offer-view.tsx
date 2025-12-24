@@ -1,18 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { ArrowDownUp, Info } from "lucide-react"
+import { ArrowDownUp, ArrowLeft, Info } from "lucide-react"
 
-interface ExecuteAdcoinModalProps {
+interface AcceptOfferViewProps {
   adcoin: {
     id: string
     advertiserName: string
@@ -31,18 +23,17 @@ interface ExecuteAdcoinModalProps {
     creatorSpend: number
     advertiserSpend: number
   }
-  open: boolean
-  onClose: () => void
+  onBack: () => void
 }
 
-export function ExecuteAdcoinModal({ adcoin, open, onClose }: ExecuteAdcoinModalProps) {
+export function AcceptOfferView({ adcoin, onBack }: AcceptOfferViewProps) {
   const [isExecuting, setIsExecuting] = useState(false)
 
   const handleExecute = async () => {
     setIsExecuting(true)
     await new Promise((resolve) => setTimeout(resolve, 2000))
     setIsExecuting(false)
-    onClose()
+    onBack()
   }
 
   const treasuryFeePercent = 1
@@ -57,14 +48,18 @@ export function ExecuteAdcoinModal({ adcoin, open, onClose }: ExecuteAdcoinModal
   const estimatedCreatorTokens = creatorCoinBuy * 50
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-        <DialogHeader>
-          <DialogTitle className="text-xl">Accept Offer</DialogTitle>
-          <DialogDescription>Review the swap details below</DialogDescription>
-        </DialogHeader>
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-3 p-4 border-b border-border">
+        <Button variant="ghost" size="icon" onClick={onBack} disabled={isExecuting}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <h1 className="text-xl font-bold">Accept Offer</h1>
+      </div>
 
-        <div className="space-y-4 py-4">
+      <div className="flex-1 overflow-y-auto p-4">
+        <p className="text-muted-foreground mb-6">Review the swap details below</p>
+
+        <div className="space-y-4">
           <div className="p-4 bg-accent rounded-xl space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-bold">1</span>
@@ -145,16 +140,16 @@ export function ExecuteAdcoinModal({ adcoin, open, onClose }: ExecuteAdcoinModal
             </div>
           </div>
         </div>
+      </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={onClose} disabled={isExecuting} className="w-full bg-transparent">
-            Cancel
-          </Button>
-          <Button onClick={handleExecute} disabled={isExecuting} className="w-full">
-            {isExecuting ? "Processing..." : "Confirm Swap"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <div className="p-4 border-t border-border space-y-2">
+        <Button onClick={handleExecute} disabled={isExecuting} className="w-full" size="lg">
+          {isExecuting ? "Processing..." : "Confirm Swap"}
+        </Button>
+        <Button variant="outline" onClick={onBack} disabled={isExecuting} className="w-full bg-transparent" size="lg">
+          Cancel
+        </Button>
+      </div>
+    </div>
   )
 }
