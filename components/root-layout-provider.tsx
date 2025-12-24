@@ -3,6 +3,7 @@
 import { OnchainKitProvider } from "@coinbase/onchainkit"
 import { base } from "wagmi/chains"
 import "@coinbase/onchainkit/styles.css"
+import "@/app/globals.css"
 
 export function RootLayoutProvider({ children }: { children: React.ReactNode }) {
   return (
