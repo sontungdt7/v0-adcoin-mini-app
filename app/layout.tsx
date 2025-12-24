@@ -1,6 +1,8 @@
 import type React from "react"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import "@coinbase/onchainkit/styles.css"
+import "./globals.css"
 import { RootLayoutProvider } from "@/components/root-layout-provider"
 
 const _geist = Geist({ subsets: ["latin"] })

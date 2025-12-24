@@ -125,3 +125,25 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  /* Override button styles to ensure theme colors apply */
+  [data-slot="button"].bg-primary {
+    background-color: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+  }
+  
+  [data-slot="button"].bg-secondary {
+    background-color: var(--secondary) !important;
+    color: var(--secondary-foreground) !important;
+  }
+  
+  [data-slot="button"].bg-accent {
+    background-color: var(--accent) !important;
+    color: var(--accent-foreground) !important;
+  }
+  
+  .bg-muted {
+    background-color: var(--muted) !important;
+  }
+}
