@@ -19,8 +19,8 @@ export async function GET() {
       version: "1",
       name: "Adcoin",
       homeUrl: URL,
-      iconUrl: `${URL}/creator-coin.jpg`,
-      splashImageUrl: `${URL}/higher-coin.jpg`,
+      iconUrl: `${URL}/adcoin-icon.png`,
+      splashImageUrl: `${URL}/adcoin-icon.png`,
       splashBackgroundColor: "#000000",
       subtitle: "Connect Brands with Creators",
       description:
