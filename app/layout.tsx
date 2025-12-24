@@ -33,9 +33,6 @@ export default function RootLayout({
               preference: 'all',
             },
           }}
-          miniKit={{
-            enabled: true,
-          }}
         >
           {children}
           <Analytics />

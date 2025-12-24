@@ -12,6 +12,7 @@ Adcoin is a Next.js 16 Base mini app that allows brands to connect with creators
 - **Forms**: React Hook Form with Zod validation
 - **Analytics**: Vercel Analytics
 - **Base SDK**: @farcaster/miniapp-sdk for mini app integration
+- **Wallet**: OnchainKit with wagmi and viem for wallet connection
 
 ## Project Structure
 ```
@@ -19,6 +20,7 @@ app/                                - Next.js App Router pages and layouts
   .well-known/farcaster.json/       - Base mini app manifest
 components/                         - React components
   ui/                               - Base UI components (shadcn/ui)
+  profile-view.tsx                  - Wallet connect/disconnect functionality
 lib/                                - Utility functions
 public/                             - Static assets (images, icons)
 styles/                             - Global CSS styles
@@ -36,23 +38,34 @@ styles/                             - Global CSS styles
 - Embed metadata included in layout metadata with `fc:miniapp` tag
 - Configured for deployment on Base app
 
+## OnchainKit Wallet Integration
+- **Provider**: OnchainKitProvider wraps the app in `app/layout.tsx`
+- **Chain**: Base mainnet
+- **Wallet Display**: Modal-based wallet connection
+- **Identity**: Uses OnchainKit Identity components (Avatar, Name, Address)
+- **Profile Tab**: Shows wallet connect button when disconnected, wallet details when connected
+
+### Environment Variables
+- `NEXT_PUBLIC_ONCHAINKIT_API_KEY`: Optional Coinbase Developer Platform API key for enhanced features
+- `NEXT_PUBLIC_URL`: Production deployment URL for manifest configuration
+
 ## Configuration
 - Next.js is configured to allow Replit proxy origins for development
 - TypeScript build errors are ignored for faster development
 - Images are unoptimized for compatibility
-- `NEXT_PUBLIC_URL` environment variable can be set for production deployment
 
 ## Key Features
 - Explore available offers between creators and brands
 - Create new Adcoins
 - View and manage your Adcoins
-- User profile management
+- User profile management with wallet connect/disconnect
 - Base mini app integration for sharing and launching from Base app
 
 ## Next Steps for Production
 1. Set `NEXT_PUBLIC_URL` environment variable to your deployment URL
-2. Deploy the app to production
-3. Generate account association credentials using Base Build's Account Association tool
-4. Add the generated credentials to the manifest file
-5. Use Base Build Preview tool to validate your app
-6. Share your app URL in the Base app to publish
+2. Set `NEXT_PUBLIC_ONCHAINKIT_API_KEY` for enhanced OnchainKit features
+3. Deploy the app to production
+4. Generate account association credentials using Base Build's Account Association tool
+5. Add the generated credentials to the manifest file
+6. Use Base Build Preview tool to validate your app
+7. Share your app URL in the Base app to publish

@@ -1,21 +1,18 @@
 "use client"
 
-import { useAccount, useDisconnect } from "wagmi"
+import { useAccount } from "wagmi"
 import {
   ConnectWallet,
   Wallet,
   WalletDropdown,
   WalletDropdownDisconnect,
-  Identity,
-  IdentityName,
 } from "@coinbase/onchainkit/wallet"
+import { Identity, Name, Avatar as OnchainAvatar, Address } from "@coinbase/onchainkit/identity"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Wallet as WalletIcon } from "lucide-react"
 
-// Mock user data for unauthenticated state
 const mockUserData = {
   address: "0x742d...8f23",
   avatar: "/user-avatar.jpg",
@@ -24,51 +21,42 @@ const mockUserData = {
 
 export function ProfileView() {
   const { address, isConnected } = useAccount()
-  const { disconnect } = useDisconnect()
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
       <Card className="overflow-hidden">
         <CardContent className="p-6">
-          {isConnected ? (
+          {isConnected && address ? (
             <>
-              {/* Connected State */}
               <div className="flex flex-col items-center gap-4 mb-6">
                 <Identity
                   address={address}
-                  schemaId="0xf8b05c3f618f5a94c27ec5a1c938f2ee6910d6ea0fb52b24701593482b557721"
+                  schemaId="0xf8b05c79f090979bf4a80270aba232dff11a10d9ca55c4f88de95317970f0de9"
                 >
-                  <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
-                    <AvatarImage />
-                    <AvatarFallback className="text-2xl">
-                      {address?.slice(2, 4).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <OnchainAvatar className="h-24 w-24" />
+                  <Name className="font-semibold text-lg" />
+                  <Address className="text-sm text-muted-foreground" />
                 </Identity>
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <WalletIcon className="h-4 w-4 text-muted-foreground" />
-                    <IdentityName address={address} />
-                  </div>
-                  <div className="flex gap-2 justify-center">
-                    {mockUserData.roles.map((role) => (
-                      <Badge key={role} variant="secondary">
-                        {role}
-                      </Badge>
-                    ))}
-                  </div>
+                <div className="flex gap-2 justify-center mt-2">
+                  {mockUserData.roles.map((role) => (
+                    <Badge key={role} variant="secondary">
+                      {role}
+                    </Badge>
+                  ))}
                 </div>
               </div>
 
-              <Wallet>
-                <WalletDropdown>
-                  <WalletDropdownDisconnect />
-                </WalletDropdown>
-              </Wallet>
+              <div className="flex justify-center">
+                <Wallet>
+                  <ConnectWallet />
+                  <WalletDropdown>
+                    <WalletDropdownDisconnect />
+                  </WalletDropdown>
+                </Wallet>
+              </div>
             </>
           ) : (
             <>
-              {/* Disconnected State - Show Connect Button */}
               <div className="flex flex-col items-center gap-4 mb-6">
                 <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
                   <AvatarImage src={mockUserData.avatar || "/placeholder.svg"} alt="Profile" />
@@ -88,9 +76,11 @@ export function ProfileView() {
                 </div>
               </div>
 
-              <Wallet>
-                <ConnectWallet />
-              </Wallet>
+              <div className="flex justify-center">
+                <Wallet>
+                  <ConnectWallet />
+                </Wallet>
+              </div>
             </>
           )}
         </CardContent>
