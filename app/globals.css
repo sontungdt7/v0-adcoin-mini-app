@@ -138,12 +138,21 @@
     color: var(--secondary-foreground) !important;
   }
   
-  [data-slot="button"].bg-accent {
+  [data-slot="button"].bg-accent,
+  button.bg-accent {
     background-color: var(--accent) !important;
-    color: var(--accent-foreground) !important;
   }
   
   .bg-muted {
     background-color: var(--muted) !important;
+  }
+  
+  /* Text color overrides */
+  .text-primary {
+    color: var(--primary) !important;
+  }
+  
+  .text-muted-foreground {
+    color: var(--muted-foreground) !important;
   }
 }
