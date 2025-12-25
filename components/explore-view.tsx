@@ -19,11 +19,11 @@ const mockAdcoins = [
     },
     creatorCoin: {
       name: "CreatorCoin",
-      symbol: "$CREATOR",
-      thumbnail: "/creator-coin.jpg",
+      symbol: "realgarrytan",
+      thumbnail: "/garry-tan.jpg",
     },
-    creatorAddress: "creator.base.eth",
-    creatorSpend: 1,
+    creatorAddress: "realgarrytan.base.eth",
+    creatorSpend: 0.1,
     advertiserSpend: 100,
     expiresIn: "12h",
     status: "active" as const,
@@ -31,20 +31,20 @@ const mockAdcoins = [
   },
   {
     id: "2",
-    advertiserName: "BasedBuilder",
-    advertiserAddress: "builder.base.eth",
+    advertiserName: "$NewBrand2",
+    advertiserAddress: "newbrand2.base.eth",
     advertiserAvatar: "/builder-avatar.png",
     targetCoin: {
-      name: "BUILDER",
-      symbol: "$BUILDER",
+      name: "NewBrand2",
+      symbol: "$NewBrand2",
       thumbnail: "/higher-coin.jpg",
     },
     creatorCoin: {
       name: "CreatorCoin",
-      symbol: "$CREATOR",
-      thumbnail: "/creator-coin.jpg",
+      symbol: "realgarrytan",
+      thumbnail: "/garry-tan.jpg",
     },
-    creatorAddress: "creator.base.eth",
+    creatorAddress: "realgarrytan.base.eth",
     creatorSpend: 1,
     advertiserSpend: 50,
     expiresIn: "6h",
@@ -64,7 +64,7 @@ const mockAdcoins = [
     creatorCoin: {
       name: "Other Creator Coin",
       symbol: "OtherCreator",
-      thumbnail: "/creator-coin.jpg",
+      thumbnail: "/garry-tan.jpg",
     },
     creatorAddress: "othercreator.base.eth",
     creatorSpend: 2,
@@ -147,9 +147,7 @@ export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
                   <div className="flex items-center gap-2 flex-1">
                     <div className="h-8 w-8 rounded-full overflow-hidden bg-muted">
                       <img
-                        src={
-                          adcoin.creatorCoin.thumbnail || "/placeholder.svg"
-                        }
+                        src={adcoin.creatorCoin.thumbnail || "/placeholder.svg"}
                         alt={adcoin.creatorCoin.name}
                         className="h-full w-full object-cover"
                       />
@@ -160,9 +158,7 @@ export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
                     <span className="text-muted-foreground">×</span>
                     <div className="h-8 w-8 rounded-full overflow-hidden bg-muted">
                       <img
-                        src={
-                          adcoin.targetCoin.thumbnail || "/placeholder.svg"
-                        }
+                        src={adcoin.targetCoin.thumbnail || "/placeholder.svg"}
                         alt={adcoin.targetCoin.name}
                         className="h-full w-full object-cover"
                       />
