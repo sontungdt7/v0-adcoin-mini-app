@@ -19,7 +19,7 @@ const mockAdcoins = [
     },
     creatorCoin: {
       name: "CreatorCoin",
-      symbol: "realgarrytan",
+      symbol: "$realgarrytan",
       thumbnail: "/garry-tan.jpg",
     },
     creatorAddress: "realgarrytan.base.eth",
@@ -41,7 +41,7 @@ const mockAdcoins = [
     },
     creatorCoin: {
       name: "CreatorCoin",
-      symbol: "realgarrytan",
+      symbol: "$realgarrytan",
       thumbnail: "/garry-tan.jpg",
     },
     creatorAddress: "realgarrytan.base.eth",

@@ -26,7 +26,7 @@ export async function GET() {
       description:
         "A mini app for managing advertising tokens and connecting advertisers with creators on Base.",
       screenshotUrls: [
-        `${URL}/base-coin.jpg`,
+        `${URL}/adcoin-icon.png`,
         `${URL}/placeholder.jpg`,
         `${URL}/placeholder.jpg`,
       ],

@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
       "fc:miniapp": JSON.stringify({
         version: "next",
         imageUrl:
-          "https://bf86a94d-4eae-4e2b-a5d4-561fd4558851-00-13dju1adontpd.sisko.replit.dev/base-coin.jpg",
+          "https://bf86a94d-4eae-4e2b-a5d4-561fd4558851-00-13dju1adontpd.sisko.replit.dev/adcoin-icon.png",
         button: {
           title: `Launch Adcoin`,
           action: {
