@@ -44,8 +44,9 @@ contract MockAdcoinTest is Test {
         assertEq(token.totalSupply(), mintAmount * 2);
     }
     
-    function testFailUnauthorizedMinting() public {
+    function test_RevertWhen_UnauthorizedMinting() public {
         vm.prank(user);
+        vm.expectRevert();
         token.mint(user, 1000 * 10**18);
     }
     
