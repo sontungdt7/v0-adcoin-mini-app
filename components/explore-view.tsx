@@ -5,6 +5,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock } from "lucide-react";
+import { Transaction } from "@coinbase/onchainkit/transaction";
+import { calls } from "./calls";
+
+const BASE_SEPOLIA_CHAIN_ID = 84532;
 
 const mockAdcoins = [
   {
@@ -112,6 +116,11 @@ export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
     <div className="p-4 space-y-4">
       <div>
         <h2 className="text-2xl font-bold mb-1">Available Offer</h2>
+      </div>
+      <div className="w-full max-w-4xl p-4">
+        <div className="mx-auto mb-6 w-1/3">
+          <Transaction chainId={BASE_SEPOLIA_CHAIN_ID} calls={calls} />
+        </div>
       </div>
 
       <div className="flex gap-2 p-1 bg-muted rounded-lg">
