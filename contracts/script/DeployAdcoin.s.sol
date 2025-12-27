@@ -10,7 +10,7 @@ contract DeployAdcoin is Script {
         address deployerAddress = vm.addr(deployerPrivateKey);
         
         address usdc = vm.envAddress("MOCKUSDC_ADDRESS");
-        address adcoinToken = vm.envAddress("MOCKADCOIN_ADDRESS");
+        address adcoinToken = vm.envAddress("MOCKADCOINTOKEN_ADDRESS");
         address treasury = deployerAddress;
         
         console.log("Deploying Adcoin contract...");
