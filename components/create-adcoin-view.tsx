@@ -15,7 +15,7 @@ import {
 } from "@coinbase/onchainkit/transaction"
 import { useAccount } from "wagmi"
 import { parseUnits, isAddress, type Address } from "viem"
-import { ADCOIN_ADDRESS, ADCOIN_ABI, MOCKUSDC_ADDRESS, ERC20_ABI } from "@/lib/contracts"
+import { ADCOIN_ADDRESS, ADCOIN_ABI, USDC_ADDRESS, ERC20_ABI } from "@/lib/contracts"
 import { ConnectWallet } from "@coinbase/onchainkit/wallet"
 
 const USDC_DECIMALS = 6
@@ -62,7 +62,7 @@ export function CreateAdcoinView() {
 
     return [
       {
-        address: MOCKUSDC_ADDRESS as Address,
+        address: USDC_ADDRESS as Address,
         abi: ERC20_ABI,
         functionName: "approve",
         args: [ADCOIN_ADDRESS, yAmount],
@@ -270,7 +270,7 @@ export function CreateAdcoinView() {
           </div>
         ) : (
           <Transaction
-            chainId={84532}
+            chainId={8453}
             contracts={contracts}
             onSuccess={handleSuccess}
             onError={handleError}

@@ -40,10 +40,15 @@ styles/                             - Global CSS styles
 
 ## OnchainKit Wallet Integration
 - **Provider**: OnchainKitProvider wraps the app in `app/layout.tsx`
-- **Chain**: Base mainnet
+- **Chain**: Base mainnet (chain ID 8453)
 - **Wallet Display**: Modal-based wallet connection
 - **Identity**: Uses OnchainKit Identity components (Avatar, Name, Address)
 - **Profile Tab**: Shows wallet connect button when disconnected, wallet details when connected
+
+### Contract Addresses (Base Mainnet)
+- **Adcoin Contract**: `0x8De8527473386Fe2902094f8d4081271d2AD2F85`
+- **USDC**: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
+- **Adcoin Token**: `0xb9af02c1c997ff5e5cbbd1050885fb26f6a70232`
 
 ### Environment Variables
 - `NEXT_PUBLIC_ONCHAINKIT_API_KEY`: Optional Coinbase Developer Platform API key for enhanced features

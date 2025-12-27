@@ -1,7 +1,9 @@
 import { type Abi } from "viem";
 
-export const ADCOIN_ADDRESS = "0x5c75DF65cBB35474D10Adeb72Aa3b1035185223e" as const;
-export const MOCKUSDC_ADDRESS = "0x40FF34E722067C488b39F07bC572DedB519Ac09e" as const;
+// Base Mainnet contract addresses
+export const ADCOIN_ADDRESS = "0x8De8527473386Fe2902094f8d4081271d2AD2F85" as const;
+export const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as const;
+export const ADCOIN_TOKEN_ADDRESS = "0xb9af02c1c997ff5e5cbbd1050885fb26f6a70232" as const;
 
 export const ADCOIN_ABI: Abi = [
   {

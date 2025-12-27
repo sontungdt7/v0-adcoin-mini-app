@@ -4,13 +4,13 @@ pragma solidity ^0.8.19;
 import {Script, console} from "forge-std/Script.sol";
 import {Adcoin} from "../src/Adcoin.sol";
 
-contract DeployAdcoin is Script {
+contract DeployAdcoinSepolia is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployerAddress = vm.addr(deployerPrivateKey);
         
-        address usdc = vm.envAddress("USDC_ADDRESS");
-        address adcoinToken = vm.envAddress("ADCOINTOKEN_ADDRESS");
+        address usdc = vm.envAddress("MOCKUSDC_ADDRESS");
+        address adcoinToken = vm.envAddress("MOCKADCOINTOKEN_ADDRESS");
         address treasury = deployerAddress;
         
         console.log("Deploying Adcoin contract...");
