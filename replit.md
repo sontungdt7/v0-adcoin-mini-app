@@ -50,6 +50,12 @@ styles/                             - Global CSS styles
 - **USDC**: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
 - **Adcoin Token**: `0xb9af02c1c997ff5e5cbbd1050885fb26f6a70232`
 
+## Zora SDK Integration
+- **Package**: `@zoralabs/coins-sdk`
+- **Usage**: Fetches coin metadata (name, symbol, image) for Zora coins in offers
+- **Function**: `getCoins()` batch-fetches coin info for all target/creator coins
+- **Display**: Shows coin symbols, names, and preview images in Explore view
+
 ### Environment Variables
 - `NEXT_PUBLIC_ONCHAINKIT_API_KEY`: Optional Coinbase Developer Platform API key for enhanced features
 - `NEXT_PUBLIC_URL`: Production deployment URL for manifest configuration

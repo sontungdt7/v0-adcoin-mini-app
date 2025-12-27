@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,8 +9,16 @@ import { useAccount, useReadContract, useReadContracts } from "wagmi";
 import { formatUnits, type Address } from "viem";
 import { ADCOIN_ADDRESS, ADCOIN_ABI } from "@/lib/contracts";
 import type { AdcoinOffer } from "@/lib/types";
+import { getCoins } from "@zoralabs/coins-sdk";
 
 const USDC_DECIMALS = 6;
+
+type CoinInfo = {
+  address: string;
+  name?: string;
+  symbol?: string;
+  imageUrl?: string;
+};
 
 interface ExploreViewProps {
   onAcceptOffer: (offer: AdcoinOffer) => void;
@@ -39,6 +47,8 @@ function truncateAddress(address: string): string {
 
 export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
   const [filterMode, setFilterMode] = useState<"mine" | "all">("mine");
+  const [coinInfoMap, setCoinInfoMap] = useState<Record<string, CoinInfo>>({});
+  const [isLoadingCoins, setIsLoadingCoins] = useState(false);
   const { address: userAddress } = useAccount();
 
   const { data: nextOfferId, isLoading: isLoadingCount } = useReadContract({
@@ -88,6 +98,84 @@ export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
       };
     })
     .filter((offer): offer is AdcoinOffer => offer !== null);
+
+  const uniqueCoinAddresses = useMemo(() => {
+    const addresses = new Set<string>();
+    offers.forEach((offer) => {
+      addresses.add(offer.targetCoin.toLowerCase());
+      addresses.add(offer.creatorCoin.toLowerCase());
+    });
+    return Array.from(addresses);
+  }, [offers]);
+
+  useEffect(() => {
+    async function fetchCoinInfo() {
+      if (uniqueCoinAddresses.length === 0) return;
+
+      const addressesToFetch = uniqueCoinAddresses.filter(
+        (addr) => !coinInfoMap[addr]
+      );
+      if (addressesToFetch.length === 0) return;
+
+      setIsLoadingCoins(true);
+      try {
+        const response = await getCoins({
+          coins: addressesToFetch.map((addr) => ({
+            chainId: 8453,
+            collectionAddress: addr,
+          })),
+        });
+
+        const newCoinInfo: Record<string, CoinInfo> = { ...coinInfoMap };
+
+        response.data?.zora20Tokens?.forEach((coin) => {
+          if (coin?.address) {
+            const addr = coin.address.toLowerCase();
+            const previewImage = coin.mediaContent?.previewImage;
+            const imageUrl = typeof previewImage === 'string' 
+              ? previewImage 
+              : previewImage?.medium || previewImage?.small || undefined;
+            newCoinInfo[addr] = {
+              address: addr,
+              name: coin.name || undefined,
+              symbol: coin.symbol || undefined,
+              imageUrl,
+            };
+          }
+        });
+
+        addressesToFetch.forEach((addr) => {
+          if (!newCoinInfo[addr]) {
+            newCoinInfo[addr] = { address: addr };
+          }
+        });
+
+        setCoinInfoMap(newCoinInfo);
+      } catch (error) {
+        console.error("Failed to fetch coin info from Zora:", error);
+        const fallbackInfo: Record<string, CoinInfo> = { ...coinInfoMap };
+        addressesToFetch.forEach((addr) => {
+          if (!fallbackInfo[addr]) {
+            fallbackInfo[addr] = { address: addr };
+          }
+        });
+        setCoinInfoMap(fallbackInfo);
+      } finally {
+        setIsLoadingCoins(false);
+      }
+    }
+
+    fetchCoinInfo();
+  }, [uniqueCoinAddresses.join(",")]);
+
+  const getCoinDisplay = (address: string) => {
+    const info = coinInfoMap[address.toLowerCase()];
+    return {
+      name: info?.name || truncateAddress(address),
+      symbol: info?.symbol || null,
+      imageUrl: info?.imageUrl || null,
+    };
+  };
 
   const filteredOffers =
     filterMode === "mine"
@@ -139,6 +227,9 @@ export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
               userAddress &&
               offer.creator.toLowerCase() === userAddress.toLowerCase();
 
+            const creatorCoinDisplay = getCoinDisplay(offer.creatorCoin);
+            const targetCoinDisplay = getCoinDisplay(offer.targetCoin);
+
             return (
               <Card
                 key={offer.id}
@@ -147,18 +238,38 @@ export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
                 <CardContent className="p-0">
                   <div className="p-4 pb-3 flex items-center gap-3 border-b border-border/50">
                     <div className="flex items-center gap-2 flex-1">
-                      <div className="h-8 w-8 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">C</span>
-                      </div>
-                      <span className="text-sm font-mono">
-                        {truncateAddress(offer.creatorCoin)}
+                      {creatorCoinDisplay.imageUrl ? (
+                        <img
+                          src={creatorCoinDisplay.imageUrl}
+                          alt={creatorCoinDisplay.name}
+                          className="h-8 w-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-8 w-8 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                          <span className="text-white text-xs font-bold">
+                            {creatorCoinDisplay.symbol?.[0] || "C"}
+                          </span>
+                        </div>
+                      )}
+                      <span className="text-sm font-semibold">
+                        {creatorCoinDisplay.symbol || creatorCoinDisplay.name}
                       </span>
                       <span className="text-muted-foreground">×</span>
-                      <div className="h-8 w-8 rounded-full overflow-hidden bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">T</span>
-                      </div>
-                      <span className="text-sm font-mono">
-                        {truncateAddress(offer.targetCoin)}
+                      {targetCoinDisplay.imageUrl ? (
+                        <img
+                          src={targetCoinDisplay.imageUrl}
+                          alt={targetCoinDisplay.name}
+                          className="h-8 w-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-8 w-8 rounded-full overflow-hidden bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center">
+                          <span className="text-white text-xs font-bold">
+                            {targetCoinDisplay.symbol?.[0] || "T"}
+                          </span>
+                        </div>
+                      )}
+                      <span className="text-sm font-semibold">
+                        {targetCoinDisplay.symbol || targetCoinDisplay.name}
                       </span>
                     </div>
                     <Badge variant="secondary" className="gap-1">
@@ -189,8 +300,8 @@ export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
                           {offer.yAmount} USDC
                         </span>{" "}
                         to buy{" "}
-                        <span className="font-mono text-sm text-primary">
-                          {truncateAddress(offer.creatorCoin)}
+                        <span className="font-bold text-primary">
+                          {creatorCoinDisplay.symbol || creatorCoinDisplay.name}
                         </span>{" "}
                         when{" "}
                         <span className="font-mono text-sm text-primary">
@@ -201,8 +312,8 @@ export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
                           {offer.xAmount} USDC
                         </span>{" "}
                         of{" "}
-                        <span className="font-mono text-sm text-primary">
-                          {truncateAddress(offer.targetCoin)}
+                        <span className="font-bold text-primary">
+                          {targetCoinDisplay.symbol || targetCoinDisplay.name}
                         </span>
                       </p>
                     </div>
