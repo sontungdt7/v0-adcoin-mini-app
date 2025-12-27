@@ -1,57 +1,120 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { InfoIcon } from "lucide-react"
+import { InfoIcon, CheckCircle2 } from "lucide-react"
+import {
+  Transaction,
+  TransactionButton,
+  TransactionStatus,
+  TransactionStatusLabel,
+  TransactionStatusAction,
+} from "@coinbase/onchainkit/transaction"
+import { useAccount } from "wagmi"
+import { parseUnits, isAddress, type Address } from "viem"
+import { ADCOIN_ADDRESS, ADCOIN_ABI, MOCKUSDC_ADDRESS, ERC20_ABI } from "@/lib/contracts"
+import { ConnectWallet } from "@coinbase/onchainkit/wallet"
+
+const USDC_DECIMALS = 6
 
 export function CreateAdcoinView() {
+  const { address, isConnected } = useAccount()
   const [formData, setFormData] = useState({
     commitAmount: "",
     creatorCoin: "",
-    creatorBaseName: "",
+    creatorAddress: "",
     targetCoinAmount: "",
     targetCoin: "",
     expiryDate: "",
   })
-
-  const [isCreating, setIsCreating] = useState(false)
+  const [txSuccess, setTxSuccess] = useState(false)
 
   const commitAmountNum = Number.parseFloat(formData.commitAmount) || 0
   const protocolFee = (commitAmountNum * 3) / 100
   const adcoinCoinBuy = (commitAmountNum * 3) / 100
   const creatorCoinBuy = (commitAmountNum * 94) / 100
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsCreating(true)
-    // Simulate blockchain transaction
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setIsCreating(false)
-    // Reset form
+  const isFormValid = useMemo(() => {
+    return (
+      formData.commitAmount &&
+      Number.parseFloat(formData.commitAmount) > 0 &&
+      formData.creatorCoin &&
+      isAddress(formData.creatorCoin) &&
+      formData.creatorAddress &&
+      isAddress(formData.creatorAddress) &&
+      formData.targetCoinAmount &&
+      Number.parseFloat(formData.targetCoinAmount) > 0 &&
+      formData.targetCoin &&
+      isAddress(formData.targetCoin) &&
+      formData.expiryDate
+    )
+  }, [formData])
+
+  const contracts = useMemo(() => {
+    if (!isFormValid || !address) return []
+
+    const yAmount = parseUnits(formData.commitAmount, USDC_DECIMALS)
+    const xAmount = parseUnits(formData.targetCoinAmount, USDC_DECIMALS)
+    const expiry = BigInt(Math.floor(new Date(formData.expiryDate).getTime() / 1000))
+
+    return [
+      {
+        address: MOCKUSDC_ADDRESS as Address,
+        abi: ERC20_ABI,
+        functionName: "approve",
+        args: [ADCOIN_ADDRESS, yAmount],
+      },
+      {
+        address: ADCOIN_ADDRESS as Address,
+        abi: ADCOIN_ABI,
+        functionName: "createOffer",
+        args: [
+          formData.creatorAddress as Address,
+          formData.targetCoin as Address,
+          formData.creatorCoin as Address,
+          xAmount,
+          yAmount,
+          expiry,
+        ],
+      },
+    ]
+  }, [isFormValid, address, formData])
+
+  const handleSuccess = useCallback(() => {
+    setTxSuccess(true)
     setFormData({
       commitAmount: "",
       creatorCoin: "",
-      creatorBaseName: "",
+      creatorAddress: "",
       targetCoinAmount: "",
       targetCoin: "",
       expiryDate: "",
     })
-  }
+    setTimeout(() => setTxSuccess(false), 5000)
+  }, [])
 
-  const isFormValid =
-    formData.commitAmount &&
-    Number.parseFloat(formData.commitAmount) > 0 &&
-    formData.creatorCoin &&
-    formData.creatorBaseName &&
-    formData.targetCoinAmount &&
-    Number.parseFloat(formData.targetCoinAmount) > 0 &&
-    formData.targetCoin &&
-    formData.expiryDate
+  const handleError = useCallback((error: { message: string }) => {
+    console.error("Transaction error:", error)
+  }, [])
+
+  if (txSuccess) {
+    return (
+      <div className="p-6 max-w-3xl mx-auto">
+        <Card className="border-2 border-green-500">
+          <CardContent className="pt-8 pb-8 px-8 text-center">
+            <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Offer Created!</h2>
+            <p className="text-muted-foreground">
+              Your Adcoin offer has been submitted to the blockchain.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -60,7 +123,7 @@ export function CreateAdcoinView() {
         <p className="text-muted-foreground">Make an Adcoin offer to the creator.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <div className="space-y-8">
         <Card className="border-2">
           <CardContent className="pt-8 pb-8 px-8">
             <div className="text-2xl leading-relaxed space-y-4">
@@ -79,9 +142,10 @@ export function CreateAdcoinView() {
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
+                <span className="font-medium text-base text-muted-foreground">Creator Coin Address:</span>
                 <Input
-                  className="inline-flex h-12 text-xl font-mono max-w-xs flex-1 min-w-[200px]"
-                  placeholder="$jesse"
+                  className="inline-flex h-12 text-lg font-mono flex-1 min-w-[280px]"
+                  placeholder="0x..."
                   value={formData.creatorCoin}
                   onChange={(e) => setFormData({ ...formData, creatorCoin: e.target.value })}
                 />
@@ -89,12 +153,16 @@ export function CreateAdcoinView() {
 
               <div className="flex flex-wrap items-center gap-3">
                 <span className="font-medium">when</span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="font-medium text-base text-muted-foreground">Creator Wallet Address:</span>
                 <Input
-                  className="inline-flex h-12 text-xl font-mono max-w-xs flex-1 min-w-[200px]"
-                  placeholder="jesse.base.eth"
-                  value={formData.creatorBaseName}
-                  onChange={(e) => setFormData({ ...formData, creatorBaseName: e.target.value })}
-                />                
+                  className="inline-flex h-12 text-lg font-mono flex-1 min-w-[280px]"
+                  placeholder="0x..."
+                  value={formData.creatorAddress}
+                  onChange={(e) => setFormData({ ...formData, creatorAddress: e.target.value })}
+                />
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
@@ -112,9 +180,10 @@ export function CreateAdcoinView() {
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
+                <span className="font-medium text-base text-muted-foreground">Target Coin Address:</span>
                 <Input
-                  className="inline-flex h-12 text-xl font-mono max-w-xs flex-1 min-w-[200px]"
-                  placeholder="$NewBrand"
+                  className="inline-flex h-12 text-lg font-mono flex-1 min-w-[280px]"
+                  placeholder="0x..."
                   value={formData.targetCoin}
                   onChange={(e) => setFormData({ ...formData, targetCoin: e.target.value })}
                 />
@@ -195,10 +264,29 @@ export function CreateAdcoinView() {
           </AlertDescription>
         </Alert>
 
-        <Button type="submit" size="lg" className="w-full text-lg h-12" disabled={!isFormValid || isCreating}>
-          {isCreating ? "Creating Offer..." : "Create Adcoin Offer"}
-        </Button>
-      </form>
+        {!isConnected ? (
+          <div className="w-full">
+            <ConnectWallet className="w-full" />
+          </div>
+        ) : (
+          <Transaction
+            chainId={84532}
+            contracts={contracts}
+            onSuccess={handleSuccess}
+            onError={handleError}
+          >
+            <TransactionButton
+              text="Create Adcoin Offer"
+              disabled={!isFormValid}
+              className="w-full text-lg h-12"
+            />
+            <TransactionStatus>
+              <TransactionStatusLabel />
+              <TransactionStatusAction />
+            </TransactionStatus>
+          </Transaction>
+        )}
+      </div>
     </div>
   )
 }
