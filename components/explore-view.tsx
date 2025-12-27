@@ -4,123 +4,109 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock } from "lucide-react";
-import { Transaction } from "@coinbase/onchainkit/transaction";
-import { calls } from "./calls";
+import { Clock, Loader2 } from "lucide-react";
+import { useAccount, useReadContract, useReadContracts } from "wagmi";
+import { formatUnits, type Address } from "viem";
+import { ADCOIN_ADDRESS, ADCOIN_ABI } from "@/lib/contracts";
+import type { AdcoinOffer } from "@/lib/types";
 
-const BASE_SEPOLIA_CHAIN_ID = 84532;
-
-const mockAdcoins = [
-  {
-    id: "1",
-    advertiserName: "NewBrand",
-    advertiserAddress: "newbrand.base.eth",
-    advertiserAvatar: "/crypto-whale-avatar.png",
-    targetCoin: {
-      name: "NewBrand",
-      symbol: "$NewBrand",
-      thumbnail: "/degen-coin.jpg",
-    },
-    creatorCoin: {
-      name: "CreatorCoin",
-      symbol: "$realgarrytan",
-      thumbnail: "/garry-tan.jpg",
-    },
-    creatorAddress: "realgarrytan.base.eth",
-    creatorSpend: 0.1,
-    advertiserSpend: 100,
-    expiresIn: "12h",
-    status: "active" as const,
-    forCreator: "0xYourAddress123",
-  },
-  {
-    id: "2",
-    advertiserName: "$NewBrand2",
-    advertiserAddress: "newbrand2.base.eth",
-    advertiserAvatar: "/builder-avatar.png",
-    targetCoin: {
-      name: "NewBrand2",
-      symbol: "$NewBrand2",
-      thumbnail: "/higher-coin.jpg",
-    },
-    creatorCoin: {
-      name: "CreatorCoin",
-      symbol: "$realgarrytan",
-      thumbnail: "/garry-tan.jpg",
-    },
-    creatorAddress: "realgarrytan.base.eth",
-    creatorSpend: 1,
-    advertiserSpend: 50,
-    expiresIn: "6h",
-    status: "active" as const,
-    forCreator: "0xYourAddress123",
-  },
-  {
-    id: "3",
-    advertiserName: "OnchainMarketer",
-    advertiserAddress: "marketer.base.eth",
-    advertiserAvatar: "/marketer-avatar.jpg",
-    targetCoin: {
-      name: "Marketer",
-      symbol: "$Marketer",
-      thumbnail: "/base-coin.jpg",
-    },
-    creatorCoin: {
-      name: "Other Creator Coin",
-      symbol: "OtherCreator",
-      thumbnail: "/garry-tan.jpg",
-    },
-    creatorAddress: "othercreator.base.eth",
-    creatorSpend: 2,
-    advertiserSpend: 30,
-    expiresIn: "24h",
-    status: "active" as const,
-    forCreator: "0xOtherCreator456",
-  },
-];
-
-type AdcoinOffer = {
-  id: string;
-  advertiserName: string;
-  advertiserAddress: string;
-  advertiserAvatar: string;
-  targetCoin: {
-    name: string;
-    symbol: string;
-    thumbnail: string;
-  };
-  creatorCoin: {
-    name: string;
-    symbol: string;
-    thumbnail: string;
-  };
-  creatorSpend: number;
-  advertiserSpend: number;
-};
+const USDC_DECIMALS = 6;
 
 interface ExploreViewProps {
   onAcceptOffer: (offer: AdcoinOffer) => void;
 }
 
+function formatTimeRemaining(expiryTimestamp: number): string {
+  const now = Math.floor(Date.now() / 1000);
+  const remaining = expiryTimestamp - now;
+  
+  if (remaining <= 0) return "Expired";
+  
+  const hours = Math.floor(remaining / 3600);
+  const minutes = Math.floor((remaining % 3600) / 60);
+  
+  if (hours > 24) {
+    const days = Math.floor(hours / 24);
+    return `${days}d`;
+  }
+  if (hours > 0) return `${hours}h`;
+  return `${minutes}m`;
+}
+
+function truncateAddress(address: string): string {
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
 export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
   const [filterMode, setFilterMode] = useState<"mine" | "all">("mine");
+  const { address: userAddress } = useAccount();
 
-  const currentUserAddress = "0xYourAddress123";
+  const { data: nextOfferId, isLoading: isLoadingCount } = useReadContract({
+    address: ADCOIN_ADDRESS as Address,
+    abi: ADCOIN_ABI,
+    functionName: "nextOfferId",
+  });
 
-  const filteredAdcoins =
+  const offerCount = nextOfferId ? Number(nextOfferId) : 0;
+
+  const offerContracts = Array.from({ length: offerCount }, (_, i) => ({
+    address: ADCOIN_ADDRESS as Address,
+    abi: ADCOIN_ABI,
+    functionName: "offers",
+    args: [BigInt(i)],
+  }));
+
+  const { data: offersData, isLoading: isLoadingOffers } = useReadContracts({
+    contracts: offerContracts,
+  });
+
+  const offers: AdcoinOffer[] = (offersData || [])
+    .map((result, index): AdcoinOffer | null => {
+      if (result.status !== "success" || !result.result) return null;
+      
+      const data = result.result as unknown as [Address, Address, Address, Address, bigint, bigint, bigint, boolean, boolean];
+      const [advertiser, creator, targetCoin, creatorCoin, xAmount, yAmount, expiry, executed, cancelled] = data;
+      
+      if (executed || cancelled) return null;
+      
+      const expiryNum = Number(expiry);
+      const now = Math.floor(Date.now() / 1000);
+      if (expiryNum <= now) return null;
+
+      return {
+        id: index.toString(),
+        advertiser,
+        creator,
+        targetCoin,
+        creatorCoin,
+        xAmount: Number(formatUnits(xAmount, USDC_DECIMALS)),
+        yAmount: Number(formatUnits(yAmount, USDC_DECIMALS)),
+        expiry: expiryNum,
+        executed,
+        cancelled,
+        expiresIn: formatTimeRemaining(expiryNum),
+      };
+    })
+    .filter((offer): offer is AdcoinOffer => offer !== null);
+
+  const filteredOffers =
     filterMode === "mine"
-      ? mockAdcoins.filter((adcoin) => adcoin.forCreator === currentUserAddress)
-      : mockAdcoins;
+      ? offers.filter(
+          (offer) =>
+            userAddress &&
+            offer.creator.toLowerCase() === userAddress.toLowerCase()
+        )
+      : offers;
+
+  const isLoading = isLoadingCount || isLoadingOffers;
 
   return (
     <div className="p-4 space-y-4">
       <div>
-        <h2 className="text-2xl font-bold mb-1">Available Offer</h2>
-      </div>
-      <div className="w-full max-w-4xl p-4">
-        <div className="mx-auto mb-6 w-1/3">
-          <Transaction chainId={BASE_SEPOLIA_CHAIN_ID} calls={calls} />
-        </div>
+        <h2 className="text-2xl font-bold mb-1">Available Offers</h2>
+        <p className="text-sm text-muted-foreground">
+          {offers.length} active offer{offers.length !== 1 ? "s" : ""} on-chain
+        </p>
       </div>
 
       <div className="flex gap-2 p-1 bg-muted rounded-lg">
@@ -142,105 +128,107 @@ export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
         </Button>
       </div>
 
-      <div className="space-y-4">
-        {filteredAdcoins.map((adcoin) => {
-          const canExecute = adcoin.forCreator === currentUserAddress;
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredOffers.map((offer) => {
+            const canExecute =
+              userAddress &&
+              offer.creator.toLowerCase() === userAddress.toLowerCase();
 
-          return (
-            <Card
-              key={adcoin.id}
-              className="overflow-hidden border-border hover:shadow-lg transition-shadow"
-            >
-              <CardContent className="p-0">
-                <div className="p-4 pb-3 flex items-center gap-3 border-b border-border/50">
-                  <div className="flex items-center gap-2 flex-1">
-                    <div className="h-8 w-8 rounded-full overflow-hidden bg-muted">
-                      <img
-                        src={adcoin.creatorCoin.thumbnail || "/placeholder.svg"}
-                        alt={adcoin.creatorCoin.name}
-                        className="h-full w-full object-cover"
-                      />
+            return (
+              <Card
+                key={offer.id}
+                className="overflow-hidden border-border hover:shadow-lg transition-shadow"
+              >
+                <CardContent className="p-0">
+                  <div className="p-4 pb-3 flex items-center gap-3 border-b border-border/50">
+                    <div className="flex items-center gap-2 flex-1">
+                      <div className="h-8 w-8 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">C</span>
+                      </div>
+                      <span className="text-sm font-mono">
+                        {truncateAddress(offer.creatorCoin)}
+                      </span>
+                      <span className="text-muted-foreground">×</span>
+                      <div className="h-8 w-8 rounded-full overflow-hidden bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">T</span>
+                      </div>
+                      <span className="text-sm font-mono">
+                        {truncateAddress(offer.targetCoin)}
+                      </span>
                     </div>
-                    <span className="text-sm font-semibold">
-                      {adcoin.creatorCoin.symbol}
-                    </span>
-                    <span className="text-muted-foreground">×</span>
-                    <div className="h-8 w-8 rounded-full overflow-hidden bg-muted">
-                      <img
-                        src={adcoin.targetCoin.thumbnail || "/placeholder.svg"}
-                        alt={adcoin.targetCoin.name}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    <span className="text-sm font-semibold">
-                      {adcoin.targetCoin.symbol}
-                    </span>
+                    <Badge variant="secondary" className="gap-1">
+                      <Clock className="h-3 w-3" />
+                      {offer.expiresIn}
+                    </Badge>
                   </div>
-                  <Badge variant="secondary" className="gap-1">
-                    <Clock className="h-3 w-3" />
-                    {adcoin.expiresIn}
-                  </Badge>
-                </div>
 
-                <div className="p-4">
-                  {!canExecute && (
-                    <div className="mb-3 p-2 bg-muted rounded-lg">
-                      <p className="text-xs text-muted-foreground">
-                        Offer for:{" "}
-                        <span className="font-mono">{adcoin.forCreator}</span>
+                  <div className="p-4">
+                    {!canExecute && (
+                      <div className="mb-3 p-2 bg-muted rounded-lg">
+                        <p className="text-xs text-muted-foreground">
+                          Offer for:{" "}
+                          <span className="font-mono">
+                            {truncateAddress(offer.creator)}
+                          </span>
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="mb-4">
+                      <p className="text-base leading-relaxed text-balance">
+                        <span className="font-mono text-sm text-primary">
+                          {truncateAddress(offer.advertiser)}
+                        </span>{" "}
+                        commits{" "}
+                        <span className="font-bold text-foreground">
+                          {offer.yAmount} USDC
+                        </span>{" "}
+                        to buy{" "}
+                        <span className="font-mono text-sm text-primary">
+                          {truncateAddress(offer.creatorCoin)}
+                        </span>{" "}
+                        when{" "}
+                        <span className="font-mono text-sm text-primary">
+                          {truncateAddress(offer.creator)}
+                        </span>{" "}
+                        buys{" "}
+                        <span className="font-bold text-foreground">
+                          {offer.xAmount} USDC
+                        </span>{" "}
+                        of{" "}
+                        <span className="font-mono text-sm text-primary">
+                          {truncateAddress(offer.targetCoin)}
+                        </span>
                       </p>
                     </div>
-                  )}
 
-                  <div className="mb-4">
-                    <p className="text-base leading-relaxed text-balance">
-                      <span className="font-mono text-sm text-primary">
-                        {adcoin.advertiserAddress}
-                      </span>{" "}
-                      commits{" "}
-                      <span className="font-bold text-foreground">
-                        {adcoin.advertiserSpend} USDC
-                      </span>{" "}
-                      to buy{" "}
-                      <span className="font-bold text-primary">
-                        {adcoin.creatorCoin.symbol}
-                      </span>{" "}
-                      when{" "}
-                      <span className="font-mono text-sm text-primary">
-                        {adcoin.creatorAddress}
-                      </span>{" "}
-                      buys{" "}
-                      <span className="font-bold text-foreground">
-                        {adcoin.creatorSpend} USDC
-                      </span>{" "}
-                      of{" "}
-                      <span className="font-bold text-primary">
-                        {adcoin.targetCoin.symbol}
-                      </span>
-                    </p>
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      onClick={() => onAcceptOffer(offer)}
+                      disabled={!canExecute}
+                    >
+                      {canExecute ? "Accept Offer" : "Not Available for You"}
+                    </Button>
                   </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    onClick={() => onAcceptOffer(adcoin)}
-                    disabled={!canExecute}
-                  >
-                    {canExecute ? "Accept Offer" : "Not Available for You"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {filteredAdcoins.length === 0 && (
+      {!isLoading && filteredOffers.length === 0 && (
         <div className="text-center py-12">
           <p className="text-muted-foreground">
             {filterMode === "mine"
               ? "No offers available for you yet"
-              : "No active promises on the platform"}
+              : "No active offers on the platform"}
           </p>
         </div>
       )}

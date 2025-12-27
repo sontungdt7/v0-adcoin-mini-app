@@ -8,25 +8,7 @@ import { MyAdcoinsView } from "@/components/my-adcoins-view";
 import { ProfileView } from "@/components/profile-view";
 import { AcceptOfferView } from "@/components/accept-offer-view";
 import { BottomNav } from "@/components/bottom-nav";
-
-type AdcoinOffer = {
-  id: string;
-  advertiserName: string;
-  advertiserAddress: string;
-  advertiserAvatar: string;
-  targetCoin: {
-    name: string;
-    symbol: string;
-    thumbnail: string;
-  };
-  creatorCoin: {
-    name: string;
-    symbol: string;
-    thumbnail: string;
-  };
-  creatorSpend: number;
-  advertiserSpend: number;
-};
+import type { AdcoinOffer } from "@/lib/types";
 
 export default function AdcoinApp() {
   const [activeTab, setActiveTab] = useState<

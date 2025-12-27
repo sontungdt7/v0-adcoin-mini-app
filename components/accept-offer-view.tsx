@@ -3,26 +3,14 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ArrowDownUp, ArrowLeft, Info } from "lucide-react"
+import type { AdcoinOffer } from "@/lib/types"
+
+function truncateAddress(address: string): string {
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
 
 interface AcceptOfferViewProps {
-  adcoin: {
-    id: string
-    advertiserName: string
-    advertiserAddress: string
-    advertiserAvatar: string
-    targetCoin: {
-      name: string
-      symbol: string
-      thumbnail: string
-    }
-    creatorCoin: {
-      name: string
-      symbol: string
-      thumbnail: string
-    }
-    creatorSpend: number
-    advertiserSpend: number
-  }
+  adcoin: AdcoinOffer
   onBack: () => void
 }
 
@@ -36,15 +24,15 @@ export function AcceptOfferView({ adcoin, onBack }: AcceptOfferViewProps) {
     onBack()
   }
 
-  const treasuryFeePercent = 1
-  const adcoinBuyPercent = 1
-  const creatorCoinPercent = 98
+  const treasuryFeePercent = 3
+  const adcoinBuyPercent = 3
+  const creatorCoinPercent = 94
 
-  const treasuryFee = (adcoin.advertiserSpend * treasuryFeePercent) / 100
-  const adcoinBuy = (adcoin.advertiserSpend * adcoinBuyPercent) / 100
-  const creatorCoinBuy = (adcoin.advertiserSpend * creatorCoinPercent) / 100
+  const treasuryFee = (adcoin.yAmount * treasuryFeePercent) / 100
+  const adcoinBuy = (adcoin.yAmount * adcoinBuyPercent) / 100
+  const creatorCoinBuy = (adcoin.yAmount * creatorCoinPercent) / 100
 
-  const estimatedTargetTokens = adcoin.creatorSpend * 100
+  const estimatedTargetTokens = adcoin.xAmount * 100
   const estimatedCreatorTokens = creatorCoinBuy * 50
 
   return (
@@ -71,21 +59,17 @@ export function AcceptOfferView({ adcoin, onBack }: AcceptOfferViewProps) {
                   <span className="text-xs font-bold text-muted-foreground">USDC</span>
                 </div>
                 <div>
-                  <p className="text-lg font-bold">${adcoin.creatorSpend} USDC</p>
+                  <p className="text-lg font-bold">${adcoin.xAmount} USDC</p>
                 </div>
               </div>
               <ArrowDownUp className="h-5 w-5 text-muted-foreground rotate-90" />
               <div className="flex items-center gap-3">
                 <div>
                   <p className="text-lg font-bold text-right">{estimatedTargetTokens.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground text-right">{adcoin.targetCoin.symbol}</p>
+                  <p className="text-xs text-muted-foreground text-right font-mono">{truncateAddress(adcoin.targetCoin)}</p>
                 </div>
-                <div className="h-10 w-10 rounded-full overflow-hidden bg-muted">
-                  <img
-                    src={adcoin.targetCoin.thumbnail || "/placeholder.svg"}
-                    alt={adcoin.targetCoin.name}
-                    className="h-full w-full object-cover"
-                  />
+                <div className="h-10 w-10 rounded-full overflow-hidden bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">T</span>
                 </div>
               </div>
             </div>
@@ -103,21 +87,17 @@ export function AcceptOfferView({ adcoin, onBack }: AcceptOfferViewProps) {
                 </div>
                 <div>
                   <p className="text-lg font-bold">${creatorCoinBuy.toFixed(0)} USDC</p>
-                  <p className="text-xs text-muted-foreground">98% of ${adcoin.advertiserSpend}</p>
+                  <p className="text-xs text-muted-foreground">94% of ${adcoin.yAmount}</p>
                 </div>
               </div>
               <ArrowDownUp className="h-5 w-5 text-muted-foreground rotate-90" />
               <div className="flex items-center gap-3">
                 <div>
                   <p className="text-lg font-bold text-right">{estimatedCreatorTokens.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground text-right">{adcoin.creatorCoin.symbol}</p>
+                  <p className="text-xs text-muted-foreground text-right font-mono">{truncateAddress(adcoin.creatorCoin)}</p>
                 </div>
-                <div className="h-10 w-10 rounded-full overflow-hidden bg-muted">
-                  <img
-                    src={adcoin.creatorCoin.thumbnail || "/placeholder.svg"}
-                    alt={adcoin.creatorCoin.name}
-                    className="h-full w-full object-cover"
-                  />
+                <div className="h-10 w-10 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">C</span>
                 </div>
               </div>
             </div>
@@ -130,14 +110,21 @@ export function AcceptOfferView({ adcoin, onBack }: AcceptOfferViewProps) {
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">1% to Treasury</span>
+                <span className="text-muted-foreground">3% to Treasury</span>
                 <span className="font-medium">${treasuryFee.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">1% buys $Adcoin → Brand Wallet</span>
+                <span className="text-muted-foreground">3% buys $Adcoin → Brand Wallet</span>
                 <span className="font-medium">${adcoinBuy.toFixed(2)}</span>
               </div>
             </div>
+          </div>
+
+          <div className="p-3 bg-muted/50 rounded-lg">
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium">Advertiser:</span>{" "}
+              <span className="font-mono">{truncateAddress(adcoin.advertiser)}</span>
+            </p>
           </div>
         </div>
       </div>
