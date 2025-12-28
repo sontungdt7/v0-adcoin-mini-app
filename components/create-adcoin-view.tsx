@@ -1,11 +1,11 @@
 "use client"
 
 import type React from "react"
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { InfoIcon, CheckCircle2 } from "lucide-react"
+import { InfoIcon, CheckCircle2, Loader2 } from "lucide-react"
 import {
   Transaction,
   TransactionButton,
@@ -17,8 +17,17 @@ import { useAccount } from "wagmi"
 import { parseUnits, isAddress, type Address } from "viem"
 import { ADCOIN_ADDRESS, ADCOIN_ABI, USDC_ADDRESS, ERC20_ABI } from "@/lib/contracts"
 import { ConnectWallet } from "@coinbase/onchainkit/wallet"
+import { getCoin } from "@zoralabs/coins-sdk"
 
 const USDC_DECIMALS = 6
+
+type CoinInfo = {
+  name?: string
+  symbol?: string
+  imageUrl?: string
+  loading?: boolean
+  error?: boolean
+}
 
 export function CreateAdcoinView() {
   const { address, isConnected } = useAccount()
@@ -31,6 +40,80 @@ export function CreateAdcoinView() {
     expiryDate: "",
   })
   const [txSuccess, setTxSuccess] = useState(false)
+  const [creatorCoinInfo, setCreatorCoinInfo] = useState<CoinInfo>({})
+  const [targetCoinInfo, setTargetCoinInfo] = useState<CoinInfo>({})
+
+  useEffect(() => {
+    async function fetchCreatorCoinInfo() {
+      if (!formData.creatorCoin || !isAddress(formData.creatorCoin)) {
+        setCreatorCoinInfo({})
+        return
+      }
+
+      setCreatorCoinInfo({ loading: true })
+      try {
+        const response = await getCoin({
+          address: formData.creatorCoin,
+          chain: 8453,
+        })
+        const coin = response.data?.zora20Token
+        if (coin) {
+          const previewImage = coin.mediaContent?.previewImage
+          const imageUrl = typeof previewImage === 'string'
+            ? previewImage
+            : previewImage?.medium || previewImage?.small || undefined
+          setCreatorCoinInfo({
+            name: coin.name || undefined,
+            symbol: coin.symbol || undefined,
+            imageUrl,
+          })
+        } else {
+          setCreatorCoinInfo({ error: true })
+        }
+      } catch {
+        setCreatorCoinInfo({ error: true })
+      }
+    }
+
+    const timeout = setTimeout(fetchCreatorCoinInfo, 500)
+    return () => clearTimeout(timeout)
+  }, [formData.creatorCoin])
+
+  useEffect(() => {
+    async function fetchTargetCoinInfo() {
+      if (!formData.targetCoin || !isAddress(formData.targetCoin)) {
+        setTargetCoinInfo({})
+        return
+      }
+
+      setTargetCoinInfo({ loading: true })
+      try {
+        const response = await getCoin({
+          address: formData.targetCoin,
+          chain: 8453,
+        })
+        const coin = response.data?.zora20Token
+        if (coin) {
+          const previewImage = coin.mediaContent?.previewImage
+          const imageUrl = typeof previewImage === 'string'
+            ? previewImage
+            : previewImage?.medium || previewImage?.small || undefined
+          setTargetCoinInfo({
+            name: coin.name || undefined,
+            symbol: coin.symbol || undefined,
+            imageUrl,
+          })
+        } else {
+          setTargetCoinInfo({ error: true })
+        }
+      } catch {
+        setTargetCoinInfo({ error: true })
+      }
+    }
+
+    const timeout = setTimeout(fetchTargetCoinInfo, 500)
+    return () => clearTimeout(timeout)
+  }, [formData.targetCoin])
 
   const commitAmountNum = Number.parseFloat(formData.commitAmount) || 0
   const protocolFee = (commitAmountNum * 3) / 100
@@ -93,12 +176,50 @@ export function CreateAdcoinView() {
       targetCoin: "",
       expiryDate: "",
     })
+    setCreatorCoinInfo({})
+    setTargetCoinInfo({})
     setTimeout(() => setTxSuccess(false), 5000)
   }, [])
 
   const handleError = useCallback((error: { message: string }) => {
     console.error("Transaction error:", error)
   }, [])
+
+  const CoinPreview = ({ info, label }: { info: CoinInfo; label: string }) => {
+    if (info.loading) {
+      return (
+        <div className="flex items-center gap-2 mt-2 p-2 bg-muted rounded-lg">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Looking up {label}...</span>
+        </div>
+      )
+    }
+    if (info.error) {
+      return (
+        <div className="mt-2 p-2 bg-yellow-500/10 rounded-lg">
+          <span className="text-sm text-yellow-600">Not found on Zora - address will still work</span>
+        </div>
+      )
+    }
+    if (info.symbol || info.name) {
+      return (
+        <div className="flex items-center gap-3 mt-2 p-2 bg-green-500/10 rounded-lg">
+          {info.imageUrl ? (
+            <img src={info.imageUrl} alt={info.name} className="h-8 w-8 rounded-full object-cover" />
+          ) : (
+            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+              <span className="text-white text-xs font-bold">{info.symbol?.[0] || "?"}</span>
+            </div>
+          )}
+          <div>
+            <p className="text-sm font-semibold text-green-700 dark:text-green-400">{info.symbol}</p>
+            {info.name && <p className="text-xs text-muted-foreground">{info.name}</p>}
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
 
   if (txSuccess) {
     return (
@@ -141,14 +262,17 @@ export function CreateAdcoinView() {
                 <span className="font-medium">USDC to buy</span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="font-medium text-base text-muted-foreground">Creator Coin Address:</span>
-                <Input
-                  className="inline-flex h-12 text-lg font-mono flex-1 min-w-[280px]"
-                  placeholder="0x..."
-                  value={formData.creatorCoin}
-                  onChange={(e) => setFormData({ ...formData, creatorCoin: e.target.value })}
-                />
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="font-medium text-base text-muted-foreground">Creator Coin Address:</span>
+                  <Input
+                    className="inline-flex h-12 text-lg font-mono flex-1 min-w-[280px]"
+                    placeholder="0x..."
+                    value={formData.creatorCoin}
+                    onChange={(e) => setFormData({ ...formData, creatorCoin: e.target.value })}
+                  />
+                </div>
+                <CoinPreview info={creatorCoinInfo} label="creator coin" />
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
@@ -179,14 +303,17 @@ export function CreateAdcoinView() {
                 <span className="font-medium">USDC of</span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="font-medium text-base text-muted-foreground">Target Coin Address:</span>
-                <Input
-                  className="inline-flex h-12 text-lg font-mono flex-1 min-w-[280px]"
-                  placeholder="0x..."
-                  value={formData.targetCoin}
-                  onChange={(e) => setFormData({ ...formData, targetCoin: e.target.value })}
-                />
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="font-medium text-base text-muted-foreground">Target Coin Address:</span>
+                  <Input
+                    className="inline-flex h-12 text-lg font-mono flex-1 min-w-[280px]"
+                    placeholder="0x..."
+                    value={formData.targetCoin}
+                    onChange={(e) => setFormData({ ...formData, targetCoin: e.target.value })}
+                  />
+                </div>
+                <CoinPreview info={targetCoinInfo} label="target coin" />
               </div>
             </div>
           </CardContent>
@@ -235,7 +362,7 @@ export function CreateAdcoinView() {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
-                    94% buy the {"creator's"} coin and send it to your address.
+                    94% buy the {creatorCoinInfo.symbol ? `$${creatorCoinInfo.symbol}` : "creator's coin"} and send it to your address.
                   </span>
                   <span className="font-semibold">${creatorCoinBuy.toFixed(2)}</span>
                 </div>
