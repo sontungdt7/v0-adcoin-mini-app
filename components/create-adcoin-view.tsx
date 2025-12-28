@@ -188,32 +188,32 @@ export function CreateAdcoinView() {
   const CoinPreview = ({ info, label }: { info: CoinInfo; label: string }) => {
     if (info.loading) {
       return (
-        <div className="flex items-center gap-2 mt-2 p-2 bg-muted rounded-lg">
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">Looking up {label}...</span>
+        <div className="flex items-center gap-2 mt-1 p-1.5 bg-muted rounded">
+          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">Looking up {label}...</span>
         </div>
       )
     }
     if (info.error) {
       return (
-        <div className="mt-2 p-2 bg-yellow-500/10 rounded-lg">
-          <span className="text-sm text-yellow-600">Not found on Zora - address will still work</span>
+        <div className="mt-1 p-1.5 bg-yellow-500/10 rounded">
+          <span className="text-xs text-yellow-600">Not found on Zora - will still work</span>
         </div>
       )
     }
     if (info.symbol || info.name) {
       return (
-        <div className="flex items-center gap-3 mt-2 p-2 bg-green-500/10 rounded-lg">
+        <div className="flex items-center gap-2 mt-1 p-1.5 bg-green-500/10 rounded">
           {info.imageUrl ? (
-            <img src={info.imageUrl} alt={info.name} className="h-8 w-8 rounded-full object-cover" />
+            <img src={info.imageUrl} alt={info.name} className="h-6 w-6 rounded-full object-cover" />
           ) : (
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-              <span className="text-white text-xs font-bold">{info.symbol?.[0] || "?"}</span>
+            <div className="h-6 w-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+              <span className="text-white text-[10px] font-bold">{info.symbol?.[0] || "?"}</span>
             </div>
           )}
-          <div>
-            <p className="text-sm font-semibold text-green-700 dark:text-green-400">{info.symbol}</p>
-            {info.name && <p className="text-xs text-muted-foreground">{info.name}</p>}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-green-700 dark:text-green-400">{info.symbol}</span>
+            {info.name && <span className="text-xs text-muted-foreground">{info.name}</span>}
           </div>
         </div>
       )
@@ -223,12 +223,12 @@ export function CreateAdcoinView() {
 
   if (txSuccess) {
     return (
-      <div className="p-6 max-w-3xl mx-auto">
+      <div className="p-4 max-w-3xl mx-auto">
         <Card className="border-2 border-green-500">
-          <CardContent className="pt-8 pb-8 px-8 text-center">
-            <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Offer Created!</h2>
-            <p className="text-muted-foreground">
+          <CardContent className="py-6 px-4 text-center">
+            <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3" />
+            <h2 className="text-lg font-bold mb-1">Offer Created!</h2>
+            <p className="text-sm text-muted-foreground">
               Your Adcoin offer has been submitted to the blockchain.
             </p>
           </CardContent>
@@ -238,20 +238,20 @@ export function CreateAdcoinView() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <div className="mb-8 text-center">
-        <h2 className="text-3xl font-bold mb-2">Create an Adcoin Offer</h2>
-        <p className="text-muted-foreground">Make an Adcoin offer to the creator.</p>
+    <div className="p-4 max-w-3xl mx-auto">
+      <div className="mb-4 text-center">
+        <h2 className="text-xl font-bold mb-1">Create an Adcoin Offer</h2>
+        <p className="text-sm text-muted-foreground">Make an Adcoin offer to the creator.</p>
       </div>
 
-      <div className="space-y-8">
-        <Card className="border-2">
-          <CardContent className="pt-8 pb-8 px-8">
-            <div className="text-2xl leading-relaxed space-y-4">
-              <div className="flex flex-wrap items-center gap-3">
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="pt-4 pb-4 px-4">
+            <div className="text-base leading-relaxed space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">I commit</span>
                 <Input
-                  className="inline-flex h-12 text-xl w-32"
+                  className="inline-flex h-9 text-base w-24"
                   type="number"
                   placeholder="100"
                   min="0"
@@ -263,10 +263,10 @@ export function CreateAdcoinView() {
               </div>
 
               <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="font-medium text-base text-muted-foreground">Creator Coin Address:</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Creator Coin:</span>
                   <Input
-                    className="inline-flex h-12 text-lg font-mono flex-1 min-w-[280px]"
+                    className="inline-flex h-9 text-sm font-mono flex-1 min-w-[200px]"
                     placeholder="0x..."
                     value={formData.creatorCoin}
                     onChange={(e) => setFormData({ ...formData, creatorCoin: e.target.value })}
@@ -275,24 +275,24 @@ export function CreateAdcoinView() {
                 <CoinPreview info={creatorCoinInfo} label="creator coin" />
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">when</span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="font-medium text-base text-muted-foreground">Creator Wallet Address:</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">Creator Wallet:</span>
                 <Input
-                  className="inline-flex h-12 text-lg font-mono flex-1 min-w-[280px]"
+                  className="inline-flex h-9 text-sm font-mono flex-1 min-w-[200px]"
                   placeholder="0x..."
                   value={formData.creatorAddress}
                   onChange={(e) => setFormData({ ...formData, creatorAddress: e.target.value })}
                 />
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">buys</span>
                 <Input
-                  className="inline-flex h-12 text-xl w-32"
+                  className="inline-flex h-9 text-base w-24"
                   type="number"
                   placeholder="1"
                   min="0"
@@ -304,10 +304,10 @@ export function CreateAdcoinView() {
               </div>
 
               <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="font-medium text-base text-muted-foreground">Target Coin Address:</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Target Coin:</span>
                   <Input
-                    className="inline-flex h-12 text-lg font-mono flex-1 min-w-[280px]"
+                    className="inline-flex h-9 text-sm font-mono flex-1 min-w-[200px]"
                     placeholder="0x..."
                     value={formData.targetCoin}
                     onChange={(e) => setFormData({ ...formData, targetCoin: e.target.value })}
@@ -319,37 +319,31 @@ export function CreateAdcoinView() {
           </CardContent>
         </Card>
 
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3 text-lg">
-            <span className="font-medium">This offer expires on</span>
-            <Input
-              type="datetime-local"
-              className="inline-flex h-11 text-base max-w-xs"
-              value={formData.expiryDate}
-              onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-            />
-          </div>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="font-medium">Expires on</span>
+          <Input
+            type="datetime-local"
+            className="inline-flex h-9 text-sm max-w-[200px]"
+            value={formData.expiryDate}
+            onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+          />
         </div>
 
         <Card className="bg-muted/50">
-          <CardContent className="pt-6 pb-6">
-            <h3 className="font-semibold text-lg mb-3">What happens when this is accepted?</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-0.5">•</span>
-                <span>The creator buys the target coin</span>
+          <CardContent className="py-3 px-4">
+            <h3 className="font-semibold text-sm mb-2">What happens when accepted?</h3>
+            <ul className="space-y-1 text-xs text-muted-foreground">
+              <li className="flex items-start gap-1.5">
+                <span className="text-primary">•</span>
+                <span>Creator buys the target coin</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-0.5">•</span>
+              <li className="flex items-start gap-1.5">
+                <span className="text-primary">•</span>
                 <span>Your USDC is spent automatically</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-0.5">•</span>
+              <li className="flex items-start gap-1.5">
+                <span className="text-primary">•</span>
                 <span>You receive creator coins</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-0.5">•</span>
-                <span>This offer can only happen once</span>
               </li>
             </ul>
           </CardContent>
@@ -357,37 +351,36 @@ export function CreateAdcoinView() {
 
         {commitAmountNum > 0 && (
           <Card className="border-primary/20">
-            <CardContent className="pt-6 pb-6">
-              <h3 className="font-semibold text-lg mb-4">How your USDC is used</h3>
-              <div className="space-y-3 text-sm">
+            <CardContent className="py-3 px-4">
+              <h3 className="font-semibold text-sm mb-2">How your USDC is used</h3>
+              <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
-                    94% buy the {creatorCoinInfo.symbol ? `$${creatorCoinInfo.symbol}` : "creator's coin"} and send it to your address.
+                    94% buy {creatorCoinInfo.symbol ? `$${creatorCoinInfo.symbol}` : "creator coin"}
                   </span>
                   <span className="font-semibold">${creatorCoinBuy.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">3% buy Adcoin coin and send them to your address.</span>
+                  <span className="text-muted-foreground">3% buy $Adcoin</span>
                   <span className="font-semibold">${adcoinCoinBuy.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">3% goes to the Adcoin protocol</span>
+                  <span className="text-muted-foreground">3% protocol fee</span>
                   <span className="font-semibold">${protocolFee.toFixed(2)}</span>
                 </div>
-                <div className="border-t border-border pt-3 flex justify-between">
-                  <span className="font-bold">Total</span>
-                  <span className="font-bold text-lg">${commitAmountNum.toFixed(2)} USDC</span>
+                <div className="border-t border-border pt-1.5 flex justify-between">
+                  <span className="font-bold text-sm">Total</span>
+                  <span className="font-bold text-sm">${commitAmountNum.toFixed(2)} USDC</span>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        <Alert>
-          <InfoIcon className="h-4 w-4" />
-          <AlertDescription className="text-sm">
-            Your USDC is locked in the smart contract. Execution is atomic and trustless. You can refund 100% after
-            expiry if not executed.
+        <Alert className="py-2">
+          <InfoIcon className="h-3.5 w-3.5" />
+          <AlertDescription className="text-xs">
+            USDC locked in contract. Refund 100% after expiry if not executed.
           </AlertDescription>
         </Alert>
 
@@ -405,7 +398,7 @@ export function CreateAdcoinView() {
             <TransactionButton
               text="Create Adcoin Offer"
               disabled={!isFormValid}
-              className="w-full text-lg h-12"
+              className="w-full text-sm h-10"
             />
             <TransactionStatus>
               <TransactionStatusLabel />
