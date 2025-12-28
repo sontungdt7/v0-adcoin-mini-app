@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, Loader2 } from "lucide-react";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
 import { formatUnits, type Address } from "viem";
+import { base } from "viem/chains";
+import { getName } from "@coinbase/onchainkit/identity";
 import { ADCOIN_ADDRESS, ADCOIN_ABI } from "@/lib/contracts";
 import type { AdcoinOffer } from "@/lib/types";
 import { getCoins } from "@zoralabs/coins-sdk";
@@ -49,6 +51,7 @@ export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
   const [filterMode, setFilterMode] = useState<"mine" | "all">("mine");
   const [coinInfoMap, setCoinInfoMap] = useState<Record<string, CoinInfo>>({});
   const [isLoadingCoins, setIsLoadingCoins] = useState(false);
+  const [nameMap, setNameMap] = useState<Record<string, string>>({});
   const { address: userAddress } = useAccount();
 
   const { data: nextOfferId, isLoading: isLoadingCount } = useReadContract({
@@ -168,6 +171,50 @@ export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
     fetchCoinInfo();
   }, [uniqueCoinAddresses.join(",")]);
 
+  const uniqueWalletAddresses = useMemo(() => {
+    const addresses = new Set<string>();
+    offers.forEach((offer) => {
+      addresses.add(offer.advertiser.toLowerCase());
+      addresses.add(offer.creator.toLowerCase());
+    });
+    return Array.from(addresses);
+  }, [offers]);
+
+  useEffect(() => {
+    async function fetchNames() {
+      if (uniqueWalletAddresses.length === 0) return;
+
+      const addressesToResolve = uniqueWalletAddresses.filter(
+        (addr) => !nameMap[addr]
+      );
+      if (addressesToResolve.length === 0) return;
+
+      const newNames: Record<string, string> = { ...nameMap };
+
+      await Promise.all(
+        addressesToResolve.map(async (addr) => {
+          try {
+            const name = await getName({ address: addr as Address, chain: base });
+            if (name) {
+              newNames[addr] = name;
+            }
+          } catch (error) {
+            console.error(`Failed to resolve name for ${addr}:`, error);
+          }
+        })
+      );
+
+      setNameMap(newNames);
+    }
+
+    fetchNames();
+  }, [uniqueWalletAddresses.join(",")]);
+
+  const getDisplayName = (address: string) => {
+    const name = nameMap[address.toLowerCase()];
+    return name || truncateAddress(address);
+  };
+
   const getCoinDisplay = (address: string) => {
     const info = coinInfoMap[address.toLowerCase()];
     return {
@@ -283,8 +330,8 @@ export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
                       <div className="mb-3 p-2 bg-muted rounded-lg">
                         <p className="text-xs text-muted-foreground">
                           Offer for:{" "}
-                          <span className="font-mono">
-                            {truncateAddress(offer.creator)}
+                          <span className="font-medium text-foreground">
+                            {getDisplayName(offer.creator)}
                           </span>
                         </p>
                       </div>
@@ -292,8 +339,8 @@ export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
 
                     <div className="mb-4">
                       <p className="text-base leading-relaxed text-balance flex flex-wrap items-center gap-1">
-                        <span className="font-mono text-sm text-primary">
-                          {truncateAddress(offer.advertiser)}
+                        <span className="font-semibold text-primary">
+                          {getDisplayName(offer.advertiser)}
                         </span>{" "}
                         commits{" "}
                         <span className="font-bold text-foreground">
@@ -317,8 +364,8 @@ export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
                           {creatorCoinDisplay.symbol || creatorCoinDisplay.name}
                         </span>{" "}
                         when{" "}
-                        <span className="font-mono text-sm text-primary">
-                          {truncateAddress(offer.creator)}
+                        <span className="font-semibold text-primary">
+                          {getDisplayName(offer.creator)}
                         </span>{" "}
                         buys{" "}
                         <span className="font-bold text-foreground">
