@@ -291,7 +291,7 @@ export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
                     )}
 
                     <div className="mb-4">
-                      <p className="text-base leading-relaxed text-balance">
+                      <p className="text-base leading-relaxed text-balance flex flex-wrap items-center gap-1">
                         <span className="font-mono text-sm text-primary">
                           {truncateAddress(offer.advertiser)}
                         </span>{" "}
@@ -300,6 +300,19 @@ export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
                           {offer.yAmount} USDC
                         </span>{" "}
                         to buy{" "}
+                        {creatorCoinDisplay.imageUrl ? (
+                          <img
+                            src={creatorCoinDisplay.imageUrl}
+                            alt={creatorCoinDisplay.name}
+                            className="inline-block h-5 w-5 rounded-full object-cover align-middle"
+                          />
+                        ) : (
+                          <span className="inline-flex h-5 w-5 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 items-center justify-center align-middle">
+                            <span className="text-white text-[10px] font-bold">
+                              {creatorCoinDisplay.symbol?.[0] || "C"}
+                            </span>
+                          </span>
+                        )}
                         <span className="font-bold text-primary">
                           {creatorCoinDisplay.symbol || creatorCoinDisplay.name}
                         </span>{" "}
@@ -312,6 +325,19 @@ export function ExploreView({ onAcceptOffer }: ExploreViewProps) {
                           {offer.xAmount} USDC
                         </span>{" "}
                         of{" "}
+                        {targetCoinDisplay.imageUrl ? (
+                          <img
+                            src={targetCoinDisplay.imageUrl}
+                            alt={targetCoinDisplay.name}
+                            className="inline-block h-5 w-5 rounded-full object-cover align-middle"
+                          />
+                        ) : (
+                          <span className="inline-flex h-5 w-5 rounded-full bg-gradient-to-br from-green-500 to-teal-500 items-center justify-center align-middle">
+                            <span className="text-white text-[10px] font-bold">
+                              {targetCoinDisplay.symbol?.[0] || "T"}
+                            </span>
+                          </span>
+                        )}
                         <span className="font-bold text-primary">
                           {targetCoinDisplay.symbol || targetCoinDisplay.name}
                         </span>
