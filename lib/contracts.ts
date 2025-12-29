@@ -73,6 +73,48 @@ export const ADCOIN_ABI: Abi = [
   },
   {
     inputs: [
+      { internalType: "uint256", name: "offerId", type: "uint256" },
+      {
+        components: [
+          { internalType: "address", name: "router", type: "address" },
+          { internalType: "bytes", name: "calldataData", type: "bytes" },
+          { internalType: "uint256", name: "usdcAmount", type: "uint256" },
+          { internalType: "uint256", name: "minBuyAmount", type: "uint256" }
+        ],
+        internalType: "struct Adcoin.SwapData",
+        name: "creatorBuysTarget",
+        type: "tuple"
+      },
+      {
+        components: [
+          { internalType: "address", name: "router", type: "address" },
+          { internalType: "bytes", name: "calldataData", type: "bytes" },
+          { internalType: "uint256", name: "usdcAmount", type: "uint256" },
+          { internalType: "uint256", name: "minBuyAmount", type: "uint256" }
+        ],
+        internalType: "struct Adcoin.SwapData",
+        name: "advertiserBuysCreator",
+        type: "tuple"
+      },
+      {
+        components: [
+          { internalType: "address", name: "router", type: "address" },
+          { internalType: "bytes", name: "calldataData", type: "bytes" },
+          { internalType: "uint256", name: "usdcAmount", type: "uint256" },
+          { internalType: "uint256", name: "minBuyAmount", type: "uint256" }
+        ],
+        internalType: "struct Adcoin.SwapData",
+        name: "advertiserBuysAdcoin",
+        type: "tuple"
+      }
+    ],
+    name: "executeOffer",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
       { internalType: "address", name: "creator", type: "address" },
       { internalType: "address", name: "targetCoin", type: "address" },
       { internalType: "address", name: "creatorCoin", type: "address" },

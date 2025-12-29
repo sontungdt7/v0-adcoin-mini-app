@@ -56,9 +56,25 @@ styles/                             - Global CSS styles
 - **Function**: `getCoins()` batch-fetches coin info for all target/creator coins
 - **Display**: Shows coin symbols, names, and preview images in Explore view
 
+## 0x Swap API Integration
+- **API Routes**: `/api/swap/price` and `/api/swap/quote` proxy requests to 0x API
+- **Hook**: `hooks/use-0x-swap.ts` provides `use0xSwapPrice` and `use0xSwapQuote` hooks
+- **Usage**: Accept Offer view fetches real-time swap quotes for:
+  - Creator buying target coin (using creator's USDC requirement)
+  - Brand buying creator coin (94% of commitment)
+  - Brand buying $Adcoin (3% of commitment)
+- **Router**: Uses 0x Exchange Proxy at `0xDef1C0ded9bec7F1a1670819833240f027b25EfF`
+
+## OnchainKit Transaction Integration
+- **Component**: `Transaction` from `@coinbase/onchainkit/transaction`
+- **Create Offer**: Uses OnchainKit Transaction to approve USDC and call `createOffer`
+- **Execute Offer**: Uses OnchainKit Transaction to call `executeOffer` with 0x swap data
+- **Status Handling**: `TransactionStatus`, `TransactionStatusLabel`, `TransactionStatusAction`
+
 ### Environment Variables
 - `NEXT_PUBLIC_ONCHAINKIT_API_KEY`: Optional Coinbase Developer Platform API key for enhanced features
 - `NEXT_PUBLIC_URL`: Production deployment URL for manifest configuration
+- `ZEROX_API_KEY`: Required for 0x Swap API (get from https://dashboard.0x.org/)
 
 ## Configuration
 - Next.js is configured to allow Replit proxy origins for development

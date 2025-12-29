@@ -1,13 +1,23 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { ArrowDownUp, ArrowLeft, Info, Loader2, AlertCircle } from "lucide-react"
+import { ArrowDownUp, ArrowLeft, Info, Loader2, AlertCircle, CheckCircle2 } from "lucide-react"
 import type { AdcoinOffer } from "@/lib/types"
-import { USDC_ADDRESS, ADCOIN_TOKEN_ADDRESS } from "@/lib/contracts"
+import { USDC_ADDRESS, ADCOIN_TOKEN_ADDRESS, ADCOIN_ADDRESS, ADCOIN_ABI } from "@/lib/contracts"
 import { use0xSwapPrice } from "@/hooks/use-0x-swap"
-import { formatUnits, parseUnits } from "viem"
+import { formatUnits, parseUnits, type Address } from "viem"
 import { getCoin } from "@zoralabs/coins-sdk"
+import { useAccount } from "wagmi"
+import {
+  Transaction,
+  TransactionButton,
+  TransactionStatus,
+  TransactionStatusLabel,
+  TransactionStatusAction,
+} from "@coinbase/onchainkit/transaction"
+import type { LifecycleStatus } from "@coinbase/onchainkit/transaction"
+import { ConnectWallet } from "@coinbase/onchainkit/wallet"
 
 function truncateAddress(address: string): string {
   return `${address.slice(0, 6)}...${address.slice(-4)}`
@@ -19,17 +29,33 @@ type CoinInfo = {
   imageUrl?: string
 }
 
+type SwapQuoteData = {
+  to: string
+  data: string
+  buyAmount: string
+  minBuyAmount: string
+  sellAmount: string
+} | null
+
 interface AcceptOfferViewProps {
   adcoin: AdcoinOffer
   onBack: () => void
 }
 
 const USDC_DECIMALS = 6
+const ZEROX_ROUTER = "0xDef1C0ded9bec7F1a1670819833240f027b25EfF" as const
 
 export function AcceptOfferView({ adcoin, onBack }: AcceptOfferViewProps) {
-  const [isExecuting, setIsExecuting] = useState(false)
+  const { address, isConnected } = useAccount()
   const [targetCoinInfo, setTargetCoinInfo] = useState<CoinInfo>({})
   const [creatorCoinInfo, setCreatorCoinInfo] = useState<CoinInfo>({})
+  const [txSuccess, setTxSuccess] = useState(false)
+  
+  const [targetQuote, setTargetQuote] = useState<SwapQuoteData>(null)
+  const [creatorQuote, setCreatorQuote] = useState<SwapQuoteData>(null)
+  const [adcoinQuote, setAdcoinQuote] = useState<SwapQuoteData>(null)
+  const [quotesLoading, setQuotesLoading] = useState(false)
+  const [quotesError, setQuotesError] = useState<string | null>(null)
 
   const treasuryFeePercent = 3
   const adcoinBuyPercent = 3
@@ -66,6 +92,46 @@ export function AcceptOfferView({ adcoin, onBack }: AcceptOfferViewProps) {
     chainId: "8453",
     enabled: true,
   })
+
+  const fetchQuotes = useCallback(async () => {
+    if (!address) return
+    
+    setQuotesLoading(true)
+    setQuotesError(null)
+
+    try {
+      const fetchQuote = async (sellToken: string, buyToken: string, sellAmount: string) => {
+        const params = new URLSearchParams({
+          sellToken,
+          buyToken,
+          sellAmount,
+          chainId: "8453",
+          taker: address,
+        })
+        const response = await fetch(`/api/swap/quote?${params.toString()}`)
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || "Failed to fetch quote")
+        }
+        return response.json()
+      }
+
+      const [target, creator, adcoinQ] = await Promise.all([
+        fetchQuote(USDC_ADDRESS, adcoin.targetCoin, xAmountInUnits),
+        fetchQuote(USDC_ADDRESS, adcoin.creatorCoin, creatorCoinBuyInUnits),
+        fetchQuote(USDC_ADDRESS, ADCOIN_TOKEN_ADDRESS, adcoinBuyInUnits),
+      ])
+
+      setTargetQuote(target)
+      setCreatorQuote(creator)
+      setAdcoinQuote(adcoinQ)
+    } catch (err) {
+      console.error("Error fetching quotes:", err)
+      setQuotesError(err instanceof Error ? err.message : "Failed to fetch quotes")
+    } finally {
+      setQuotesLoading(false)
+    }
+  }, [address, adcoin.targetCoin, adcoin.creatorCoin, xAmountInUnits, creatorCoinBuyInUnits, adcoinBuyInUnits])
 
   useEffect(() => {
     async function fetchCoinInfo() {
@@ -107,12 +173,53 @@ export function AcceptOfferView({ adcoin, onBack }: AcceptOfferViewProps) {
     fetchCoinInfo()
   }, [adcoin.targetCoin, adcoin.creatorCoin])
 
-  const handleExecute = async () => {
-    setIsExecuting(true)
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setIsExecuting(false)
-    onBack()
-  }
+  const contracts = useMemo(() => {
+    if (!targetQuote || !creatorQuote || !adcoinQuote) return []
+
+    const offerId = BigInt(adcoin.id)
+    
+    const creatorBuysTarget = {
+      router: ZEROX_ROUTER as Address,
+      calldataData: targetQuote.data as `0x${string}`,
+      usdcAmount: BigInt(xAmountInUnits),
+      minBuyAmount: BigInt(targetQuote.minBuyAmount || targetQuote.buyAmount),
+    }
+
+    const advertiserBuysCreator = {
+      router: ZEROX_ROUTER as Address,
+      calldataData: creatorQuote.data as `0x${string}`,
+      usdcAmount: BigInt(creatorCoinBuyInUnits),
+      minBuyAmount: BigInt(creatorQuote.minBuyAmount || creatorQuote.buyAmount),
+    }
+
+    const advertiserBuysAdcoin = {
+      router: ZEROX_ROUTER as Address,
+      calldataData: adcoinQuote.data as `0x${string}`,
+      usdcAmount: BigInt(adcoinBuyInUnits),
+      minBuyAmount: BigInt(adcoinQuote.minBuyAmount || adcoinQuote.buyAmount),
+    }
+
+    return [
+      {
+        address: ADCOIN_ADDRESS as Address,
+        abi: ADCOIN_ABI,
+        functionName: "executeOffer",
+        args: [offerId, creatorBuysTarget, advertiserBuysCreator, advertiserBuysAdcoin],
+      },
+    ]
+  }, [targetQuote, creatorQuote, adcoinQuote, adcoin.id, xAmountInUnits, creatorCoinBuyInUnits, adcoinBuyInUnits])
+
+  const handleSuccess = useCallback(() => {
+    setTxSuccess(true)
+  }, [])
+
+  const handleError = useCallback((error: { message: string }) => {
+    console.error("Transaction error:", error)
+  }, [])
+
+  const handleStatus = useCallback((status: LifecycleStatus) => {
+    console.log("Transaction status:", status)
+  }, [])
 
   const formatTokenAmount = (amount: string | undefined, decimals: number = 18): string => {
     if (!amount) return "..."
@@ -136,11 +243,29 @@ export function AcceptOfferView({ adcoin, onBack }: AcceptOfferViewProps) {
 
   const isLoading = targetLoading || creatorLoading || adcoinLoading
   const hasError = targetError || creatorError
+  const quotesReady = targetQuote && creatorQuote && adcoinQuote
+
+  if (txSuccess) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center p-6">
+        <div className="text-center">
+          <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">Offer Executed!</h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            The swap has been completed successfully.
+          </p>
+          <Button onClick={onBack} className="w-full">
+            Back to Explore
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-3 p-4 border-b border-border">
-        <Button variant="ghost" size="icon" onClick={onBack} disabled={isExecuting}>
+        <Button variant="ghost" size="icon" onClick={onBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <h1 className="text-xl font-bold">Accept Offer</h1>
@@ -243,7 +368,14 @@ export function AcceptOfferView({ adcoin, onBack }: AcceptOfferViewProps) {
           {hasError && (
             <div className="p-3 bg-destructive/10 rounded-lg flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-destructive" />
-              <p className="text-xs text-destructive">Some swap quotes are unavailable. The offer may still be executable.</p>
+              <p className="text-xs text-destructive">Some swap quotes are unavailable.</p>
+            </div>
+          )}
+
+          {quotesError && (
+            <div className="p-3 bg-destructive/10 rounded-lg flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-destructive" />
+              <p className="text-xs text-destructive">{quotesError}</p>
             </div>
           )}
 
@@ -257,12 +389,54 @@ export function AcceptOfferView({ adcoin, onBack }: AcceptOfferViewProps) {
       </div>
 
       <div className="p-4 border-t border-border space-y-2">
-        <Button onClick={handleExecute} disabled={isExecuting || isLoading} className="w-full" size="lg">
-          {isExecuting ? "Processing..." : isLoading ? "Fetching Quotes..." : "Confirm Swap"}
-        </Button>
-        <Button variant="outline" onClick={onBack} disabled={isExecuting} className="w-full bg-transparent" size="lg">
-          Cancel
-        </Button>
+        {!isConnected ? (
+          <ConnectWallet className="w-full" />
+        ) : !quotesReady ? (
+          <>
+            <Button 
+              onClick={fetchQuotes} 
+              disabled={quotesLoading || isLoading} 
+              className="w-full" 
+              size="lg"
+            >
+              {quotesLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Fetching Quotes...
+                </>
+              ) : isLoading ? (
+                "Loading Prices..."
+              ) : (
+                "Get Swap Quotes"
+              )}
+            </Button>
+            <Button variant="outline" onClick={onBack} className="w-full bg-transparent" size="lg">
+              Cancel
+            </Button>
+          </>
+        ) : (
+          <>
+            <Transaction
+              chainId={8453}
+              contracts={contracts}
+              onSuccess={handleSuccess}
+              onError={handleError}
+              onStatus={handleStatus}
+            >
+              <TransactionButton
+                text="Execute Offer"
+                className="w-full text-sm"
+              />
+              <TransactionStatus>
+                <TransactionStatusLabel />
+                <TransactionStatusAction />
+              </TransactionStatus>
+            </Transaction>
+            <Button variant="outline" onClick={onBack} className="w-full bg-transparent" size="lg">
+              Cancel
+            </Button>
+          </>
+        )}
       </div>
     </div>
   )
