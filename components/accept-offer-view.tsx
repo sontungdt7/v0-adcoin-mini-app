@@ -1,12 +1,22 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { ArrowDownUp, ArrowLeft, Info } from "lucide-react"
+import { ArrowDownUp, ArrowLeft, Info, Loader2, AlertCircle } from "lucide-react"
 import type { AdcoinOffer } from "@/lib/types"
+import { USDC_ADDRESS, ADCOIN_TOKEN_ADDRESS } from "@/lib/contracts"
+import { use0xSwapPrice } from "@/hooks/use-0x-swap"
+import { formatUnits, parseUnits } from "viem"
+import { getCoin } from "@zoralabs/coins-sdk"
 
 function truncateAddress(address: string): string {
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  return `${address.slice(0, 6)}...${address.slice(-4)}`
+}
+
+type CoinInfo = {
+  name?: string
+  symbol?: string
+  imageUrl?: string
 }
 
 interface AcceptOfferViewProps {
@@ -14,15 +24,12 @@ interface AcceptOfferViewProps {
   onBack: () => void
 }
 
+const USDC_DECIMALS = 6
+
 export function AcceptOfferView({ adcoin, onBack }: AcceptOfferViewProps) {
   const [isExecuting, setIsExecuting] = useState(false)
-
-  const handleExecute = async () => {
-    setIsExecuting(true)
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setIsExecuting(false)
-    onBack()
-  }
+  const [targetCoinInfo, setTargetCoinInfo] = useState<CoinInfo>({})
+  const [creatorCoinInfo, setCreatorCoinInfo] = useState<CoinInfo>({})
 
   const treasuryFeePercent = 3
   const adcoinBuyPercent = 3
@@ -32,8 +39,103 @@ export function AcceptOfferView({ adcoin, onBack }: AcceptOfferViewProps) {
   const adcoinBuy = (adcoin.yAmount * adcoinBuyPercent) / 100
   const creatorCoinBuy = (adcoin.yAmount * creatorCoinPercent) / 100
 
-  const estimatedTargetTokens = adcoin.xAmount * 100
-  const estimatedCreatorTokens = creatorCoinBuy * 50
+  const xAmountInUnits = parseUnits(adcoin.xAmount.toString(), USDC_DECIMALS).toString()
+  const creatorCoinBuyInUnits = parseUnits(creatorCoinBuy.toFixed(6), USDC_DECIMALS).toString()
+  const adcoinBuyInUnits = parseUnits(adcoinBuy.toFixed(6), USDC_DECIMALS).toString()
+
+  const { price: targetSwapPrice, loading: targetLoading, error: targetError } = use0xSwapPrice({
+    sellToken: USDC_ADDRESS,
+    buyToken: adcoin.targetCoin,
+    sellAmount: xAmountInUnits,
+    chainId: "8453",
+    enabled: true,
+  })
+
+  const { price: creatorSwapPrice, loading: creatorLoading, error: creatorError } = use0xSwapPrice({
+    sellToken: USDC_ADDRESS,
+    buyToken: adcoin.creatorCoin,
+    sellAmount: creatorCoinBuyInUnits,
+    chainId: "8453",
+    enabled: true,
+  })
+
+  const { price: adcoinSwapPrice, loading: adcoinLoading } = use0xSwapPrice({
+    sellToken: USDC_ADDRESS,
+    buyToken: ADCOIN_TOKEN_ADDRESS,
+    sellAmount: adcoinBuyInUnits,
+    chainId: "8453",
+    enabled: true,
+  })
+
+  useEffect(() => {
+    async function fetchCoinInfo() {
+      try {
+        const [targetRes, creatorRes] = await Promise.all([
+          getCoin({ address: adcoin.targetCoin, chain: 8453 }),
+          getCoin({ address: adcoin.creatorCoin, chain: 8453 }),
+        ])
+
+        const targetCoin = targetRes.data?.zora20Token
+        if (targetCoin) {
+          const previewImage = targetCoin.mediaContent?.previewImage
+          const imageUrl = typeof previewImage === 'string'
+            ? previewImage
+            : previewImage?.medium || previewImage?.small || undefined
+          setTargetCoinInfo({
+            name: targetCoin.name || undefined,
+            symbol: targetCoin.symbol || undefined,
+            imageUrl,
+          })
+        }
+
+        const creatorCoin = creatorRes.data?.zora20Token
+        if (creatorCoin) {
+          const previewImage = creatorCoin.mediaContent?.previewImage
+          const imageUrl = typeof previewImage === 'string'
+            ? previewImage
+            : previewImage?.medium || previewImage?.small || undefined
+          setCreatorCoinInfo({
+            name: creatorCoin.name || undefined,
+            symbol: creatorCoin.symbol || undefined,
+            imageUrl,
+          })
+        }
+      } catch (err) {
+        console.error("Error fetching coin info:", err)
+      }
+    }
+    fetchCoinInfo()
+  }, [adcoin.targetCoin, adcoin.creatorCoin])
+
+  const handleExecute = async () => {
+    setIsExecuting(true)
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+    setIsExecuting(false)
+    onBack()
+  }
+
+  const formatTokenAmount = (amount: string | undefined, decimals: number = 18): string => {
+    if (!amount) return "..."
+    const formatted = formatUnits(BigInt(amount), decimals)
+    const num = parseFloat(formatted)
+    if (num >= 1000000) return `${(num / 1000000).toFixed(2)}M`
+    if (num >= 1000) return `${(num / 1000).toFixed(2)}K`
+    if (num >= 1) return num.toFixed(2)
+    return num.toFixed(6)
+  }
+
+  const CoinAvatar = ({ info, fallback, gradient }: { info: CoinInfo; fallback: string; gradient: string }) => (
+    <div className={`h-10 w-10 rounded-full overflow-hidden ${!info.imageUrl ? gradient : ''} flex items-center justify-center`}>
+      {info.imageUrl ? (
+        <img src={info.imageUrl} alt={info.name || fallback} className="h-full w-full object-cover" />
+      ) : (
+        <span className="text-white text-xs font-bold">{info.symbol?.[0] || fallback}</span>
+      )}
+    </div>
+  )
+
+  const isLoading = targetLoading || creatorLoading || adcoinLoading
+  const hasError = targetError || creatorError
 
   return (
     <div className="flex flex-col h-full">
@@ -45,82 +147,107 @@ export function AcceptOfferView({ adcoin, onBack }: AcceptOfferViewProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        <p className="text-muted-foreground mb-6">Review the swap details below</p>
+        <p className="text-muted-foreground mb-4 text-sm">Review the swap details below</p>
 
-        <div className="space-y-4">
-          <div className="p-4 bg-accent rounded-xl space-y-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+        <div className="space-y-3">
+          <div className="p-3 bg-accent rounded-xl space-y-2">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
               <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-bold">1</span>
               <span>You swap</span>
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full overflow-hidden bg-muted flex items-center justify-center">
-                  <span className="text-xs font-bold text-muted-foreground">USDC</span>
+              <div className="flex items-center gap-2">
+                <div className="h-10 w-10 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">$</span>
                 </div>
                 <div>
-                  <p className="text-lg font-bold">${adcoin.xAmount} USDC</p>
+                  <p className="text-base font-bold">${adcoin.xAmount} USDC</p>
                 </div>
               </div>
-              <ArrowDownUp className="h-5 w-5 text-muted-foreground rotate-90" />
-              <div className="flex items-center gap-3">
-                <div>
-                  <p className="text-lg font-bold text-right">{estimatedTargetTokens.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground text-right font-mono">{truncateAddress(adcoin.targetCoin)}</p>
+              <ArrowDownUp className="h-4 w-4 text-muted-foreground rotate-90" />
+              <div className="flex items-center gap-2">
+                <div className="text-right">
+                  {targetLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin ml-auto" />
+                  ) : targetError ? (
+                    <p className="text-sm text-destructive">Quote unavailable</p>
+                  ) : (
+                    <>
+                      <p className="text-base font-bold">{formatTokenAmount(targetSwapPrice?.buyAmount)}</p>
+                      <p className="text-xs text-muted-foreground">{targetCoinInfo.symbol || truncateAddress(adcoin.targetCoin)}</p>
+                    </>
+                  )}
                 </div>
-                <div className="h-10 w-10 rounded-full overflow-hidden bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">T</span>
-                </div>
+                <CoinAvatar info={targetCoinInfo} fallback="T" gradient="bg-gradient-to-br from-green-500 to-teal-500" />
               </div>
             </div>
           </div>
 
-          <div className="p-4 bg-accent rounded-xl space-y-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <div className="p-3 bg-accent rounded-xl space-y-2">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
               <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-bold">2</span>
-              <span>Brand swaps</span>
+              <span>Brand swaps (94% of ${adcoin.yAmount})</span>
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full overflow-hidden bg-muted flex items-center justify-center">
-                  <span className="text-xs font-bold text-muted-foreground">USDC</span>
+              <div className="flex items-center gap-2">
+                <div className="h-10 w-10 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">$</span>
                 </div>
                 <div>
-                  <p className="text-lg font-bold">${creatorCoinBuy.toFixed(0)} USDC</p>
-                  <p className="text-xs text-muted-foreground">94% of ${adcoin.yAmount}</p>
+                  <p className="text-base font-bold">${creatorCoinBuy.toFixed(2)} USDC</p>
                 </div>
               </div>
-              <ArrowDownUp className="h-5 w-5 text-muted-foreground rotate-90" />
-              <div className="flex items-center gap-3">
-                <div>
-                  <p className="text-lg font-bold text-right">{estimatedCreatorTokens.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground text-right font-mono">{truncateAddress(adcoin.creatorCoin)}</p>
+              <ArrowDownUp className="h-4 w-4 text-muted-foreground rotate-90" />
+              <div className="flex items-center gap-2">
+                <div className="text-right">
+                  {creatorLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin ml-auto" />
+                  ) : creatorError ? (
+                    <p className="text-sm text-destructive">Quote unavailable</p>
+                  ) : (
+                    <>
+                      <p className="text-base font-bold">{formatTokenAmount(creatorSwapPrice?.buyAmount)}</p>
+                      <p className="text-xs text-muted-foreground">{creatorCoinInfo.symbol || truncateAddress(adcoin.creatorCoin)}</p>
+                    </>
+                  )}
                 </div>
-                <div className="h-10 w-10 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">C</span>
-                </div>
+                <CoinAvatar info={creatorCoinInfo} fallback="C" gradient="bg-gradient-to-br from-blue-500 to-purple-500" />
               </div>
             </div>
           </div>
 
-          <div className="p-4 bg-muted rounded-xl space-y-3">
-            <div className="flex items-center gap-2 text-sm font-medium">
+          <div className="p-3 bg-muted rounded-xl space-y-2">
+            <div className="flex items-center gap-2 text-xs font-medium">
               <Info className="h-4 w-4 text-muted-foreground" />
-              <span>Protocol Fee</span>
+              <span>Protocol Fees (6%)</span>
             </div>
-            <div className="space-y-2 text-sm">
+            <div className="space-y-1.5 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">3% to Treasury</span>
                 <span className="font-medium">${treasuryFee.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">3% buys $Adcoin → Brand Wallet</span>
-                <span className="font-medium">${adcoinBuy.toFixed(2)}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">3% buys $Adcoin for Brand</span>
+                <span className="font-medium">
+                  ${adcoinBuy.toFixed(2)}
+                  {adcoinSwapPrice && !adcoinLoading && (
+                    <span className="text-muted-foreground ml-1">
+                      ({formatTokenAmount(adcoinSwapPrice.buyAmount)} $ADCOIN)
+                    </span>
+                  )}
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="p-3 bg-muted/50 rounded-lg">
+          {hasError && (
+            <div className="p-3 bg-destructive/10 rounded-lg flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-destructive" />
+              <p className="text-xs text-destructive">Some swap quotes are unavailable. The offer may still be executable.</p>
+            </div>
+          )}
+
+          <div className="p-2 bg-muted/50 rounded-lg">
             <p className="text-xs text-muted-foreground">
               <span className="font-medium">Advertiser:</span>{" "}
               <span className="font-mono">{truncateAddress(adcoin.advertiser)}</span>
@@ -130,8 +257,8 @@ export function AcceptOfferView({ adcoin, onBack }: AcceptOfferViewProps) {
       </div>
 
       <div className="p-4 border-t border-border space-y-2">
-        <Button onClick={handleExecute} disabled={isExecuting} className="w-full" size="lg">
-          {isExecuting ? "Processing..." : "Confirm Swap"}
+        <Button onClick={handleExecute} disabled={isExecuting || isLoading} className="w-full" size="lg">
+          {isExecuting ? "Processing..." : isLoading ? "Fetching Quotes..." : "Confirm Swap"}
         </Button>
         <Button variant="outline" onClick={onBack} disabled={isExecuting} className="w-full bg-transparent" size="lg">
           Cancel
